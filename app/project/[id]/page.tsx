@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Plus, Sparkles } from 'lucide-react'
+import AIChat from '@/components/AIChat'
 import type { Project, Stakeholder, ProjectAnalytics } from '@/lib/types'
 
 export default function ProjectPage() {
@@ -15,6 +16,7 @@ export default function ProjectPage() {
   const [analytics, setAnalytics] = useState<ProjectAnalytics | null>(null)
   const [newStakeholderName, setNewStakeholderName] = useState('')
   const [newStakeholderRole, setNewStakeholderRole] = useState('')
+  const [isChatOpen, setIsChatOpen] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -27,9 +29,9 @@ export default function ProjectPage() {
       fetch(`/api/analytics?projectId=${projectId}`),
     ])
 
-    setProject(await projectRes.json())
-    setStakeholders(await stakeholdersRes.json())
-    setAnalytics(await analyticsRes.json())
+    if (projectRes.ok) setProject(await projectRes.json())
+    if (stakeholdersRes.ok) setStakeholders(await stakeholdersRes.json())
+    if (analyticsRes.ok) setAnalytics(await analyticsRes.json())
   }
 
   const addStakeholder = async (e: React.FormEvent) => {
@@ -51,72 +53,64 @@ export default function ProjectPage() {
     fetchData()
   }
 
-  const askAI = async () => {
-    const response = await fetch('https://shiporsink-ai-api.vercel.app/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        question: 'Give me a brief project status update and what I should focus on.',
-        projectContext: {
-          projectName: project?.name,
-          status: project?.status,
-          riskLevel: analytics?.riskAssessment,
-          totalEngagement: analytics?.engagementLevel,
-          stakeholders: stakeholders.map(s => ({
-            name: s.name,
-            role: s.role,
-            engagement: s.engagement_score,
-            performance: s.performance_score,
-            comments: s.comments,
-          })),
-        },
-      }),
-    })
-
-    const data = await response.json()
-    alert(data.response) // Simple demo - would make this nicer in full version
+  const projectContext = {
+    projectName: project?.name || '',
+    status: project?.status || '',
+    riskLevel: analytics?.riskAssessment || 0,
+    totalEngagement: analytics?.engagementLevel || 0,
+    stakeholders: stakeholders.map(s => ({
+      name: s.name,
+      role: s.role,
+      engagement: s.engagement_score,
+      performance: s.performance_score,
+      comments: s.comments,
+    })),
   }
 
-  if (!project) return <div className="p-8">Loading...</div>
+  if (!project) return <div className="p-8 text-white">Loading...</div>
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <header className="bg-white dark:bg-gray-800 border-b">
+    <div className="min-h-screen bg-gray-900">
+      <header className="bg-gray-800 border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <button
             onClick={() => router.push('/dashboard')}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
+            className="flex items-center gap-2 text-gray-400 hover:text-white mb-4"
           >
             <ArrowLeft className="w-5 h-5" />
             Back to Dashboard
           </button>
-          <h1 className="text-3xl font-bold">{project.name}</h1>
+          <h1 className="text-3xl font-bold text-white">{project.name}</h1>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold mb-2">Stakeholders</h3>
-            <p className="text-3xl font-bold">{stakeholders.length}</p>
+          <div className="bg-gray-800 p-6 rounded-lg">
+            <h3 className="text-lg font-semibold text-gray-300 mb-2">Stakeholders</h3>
+            <p className="text-3xl font-bold text-white">{stakeholders.length}</p>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold mb-2">Engagement</h3>
-            <p className="text-3xl font-bold">{analytics?.engagementLevel || 0}</p>
+          <div className="bg-gray-800 p-6 rounded-lg">
+            <h3 className="text-lg font-semibold text-gray-300 mb-2">Engagement</h3>
+            <p className="text-3xl font-bold text-white">{analytics?.engagementLevel || 0}</p>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold mb-2">Risk Level</h3>
-            <p className="text-3xl font-bold text-yellow-600">{analytics?.riskAssessment || 0}%</p>
+          <div className="bg-gray-800 p-6 rounded-lg">
+            <h3 className="text-lg font-semibold text-gray-300 mb-2">Risk Level</h3>
+            <p className={`text-3xl font-bold ${
+              (analytics?.riskAssessment || 0) >= 75 ? 'text-red-500' :
+              (analytics?.riskAssessment || 0) >= 50 ? 'text-yellow-500' :
+              'text-green-500'
+            }`}>{analytics?.riskAssessment || 0}%</p>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold">Stakeholders</h2>
+        <div className="bg-gray-800 p-6 rounded-lg">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-white">Stakeholders</h2>
             <button
-              onClick={askAI}
+              onClick={() => setIsChatOpen(true)}
               className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
             >
               <Sparkles className="w-5 h-5" />
@@ -130,14 +124,14 @@ export default function ProjectPage() {
               value={newStakeholderName}
               onChange={(e) => setNewStakeholderName(e.target.value)}
               placeholder="Name..."
-              className="flex-1 px-4 py-2 border rounded-lg"
+              className="flex-1 px-4 py-2 rounded-lg"
             />
             <input
               type="text"
               value={newStakeholderRole}
               onChange={(e) => setNewStakeholderRole(e.target.value)}
               placeholder="Role..."
-              className="flex-1 px-4 py-2 border rounded-lg"
+              className="flex-1 px-4 py-2 rounded-lg"
             />
             <button
               type="submit"
@@ -150,15 +144,15 @@ export default function ProjectPage() {
 
           <div className="space-y-4">
             {stakeholders.map((s) => (
-              <div key={s.id} className="border rounded-lg p-4">
-                <div className="flex justify-between mb-2">
+              <div key={s.id} className="border border-gray-700 rounded-lg p-4">
+                <div className="flex justify-between">
                   <div>
-                    <h3 className="font-semibold">{s.name}</h3>
-                    <p className="text-sm text-gray-600">{s.role}</p>
+                    <h3 className="font-semibold text-white">{s.name}</h3>
+                    <p className="text-sm text-gray-400">{s.role}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm">Engagement: {s.engagement_score}/100</p>
-                    <p className="text-sm">Performance: {s.performance_score}/100</p>
+                  <div className="text-right text-sm text-gray-400">
+                    <p>Engagement: {s.engagement_score}/100</p>
+                    <p>Performance: {s.performance_score}/100</p>
                   </div>
                 </div>
               </div>
@@ -172,6 +166,12 @@ export default function ProjectPage() {
           )}
         </div>
       </main>
+
+      <AIChat
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        projectContext={projectContext}
+      />
     </div>
   )
 }
