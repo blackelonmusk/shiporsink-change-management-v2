@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Sparkles } from 'lucide-react'
+import { ArrowLeft, Plus, Sparkles, Save } from 'lucide-react'
 import AIChat from '@/components/AIChat'
 import type { Project, Stakeholder, ProjectAnalytics } from '@/lib/types'
 
@@ -17,6 +17,7 @@ export default function ProjectPage() {
   const [newStakeholderName, setNewStakeholderName] = useState('')
   const [newStakeholderRole, setNewStakeholderRole] = useState('')
   const [isChatOpen, setIsChatOpen] = useState(false)
+  const [editingScores, setEditingScores] = useState<{[key: string]: {engagement: number, performance: number}}>({})
 
   useEffect(() => {
     fetchData()
@@ -30,7 +31,16 @@ export default function ProjectPage() {
     ])
 
     if (projectRes.ok) setProject(await projectRes.json())
-    if (stakeholdersRes.ok) setStakeholders(await stakeholdersRes.json())
+    if (stakeholdersRes.ok) {
+      const data = await stakeholdersRes.json()
+      setStakeholders(data)
+      // Initialize editing scores
+      const scores: {[key: string]: {engagement: number, performance: number}} = {}
+      data.forEach((s: Stakeholder) => {
+        scores[s.id] = { engagement: s.engagement_score, performance: s.performance_score }
+      })
+      setEditingScores(scores)
+    }
     if (analyticsRes.ok) setAnalytics(await analyticsRes.json())
   }
 
@@ -53,6 +63,34 @@ export default function ProjectPage() {
     fetchData()
   }
 
+  const updateScores = async (stakeholderId: string) => {
+    const scores = editingScores[stakeholderId]
+    if (!scores) return
+
+    await fetch('/api/stakeholders', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: stakeholderId,
+        engagement_score: scores.engagement,
+        performance_score: scores.performance,
+        comments: '',
+      }),
+    })
+
+    fetchData()
+  }
+
+  const handleScoreChange = (stakeholderId: string, type: 'engagement' | 'performance', value: number) => {
+    setEditingScores(prev => ({
+      ...prev,
+      [stakeholderId]: {
+        ...prev[stakeholderId],
+        [type]: value
+      }
+    }))
+  }
+
   const projectContext = {
     projectName: project?.name || '',
     status: project?.status || '',
@@ -61,8 +99,8 @@ export default function ProjectPage() {
     stakeholders: stakeholders.map(s => ({
       name: s.name,
       role: s.role,
-      engagement: s.engagement_score,
-      performance: s.performance_score,
+      engagement: editingScores[s.id]?.engagement || s.engagement_score,
+      performance: editingScores[s.id]?.performance || s.performance_score,
       comments: s.comments,
     })),
   }
@@ -145,14 +183,49 @@ export default function ProjectPage() {
           <div className="space-y-4">
             {stakeholders.map((s) => (
               <div key={s.id} className="border border-gray-700 rounded-lg p-4">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="font-semibold text-white">{s.name}</h3>
+                    <h3 className="font-semibold text-white text-lg">{s.name}</h3>
                     <p className="text-sm text-gray-400">{s.role}</p>
                   </div>
-                  <div className="text-right text-sm text-gray-400">
-                    <p>Engagement: {s.engagement_score}/100</p>
-                    <p>Performance: {s.performance_score}/100</p>
+                  <button
+                    onClick={() => updateScores(s.id)}
+                    className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 flex items-center gap-1 text-sm"
+                  >
+                    <Save className="w-4 h-4" />
+                    Save
+                  </button>
+                </div>
+                
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-gray-400">Engagement</span>
+                      <span className="text-white font-medium">{editingScores[s.id]?.engagement || 0}/100</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={editingScores[s.id]?.engagement || 0}
+                      onChange={(e) => handleScoreChange(s.id, 'engagement', parseInt(e.target.value))}
+                      className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                    />
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-gray-400">Performance</span>
+                      <span className="text-white font-medium">{editingScores[s.id]?.performance || 0}/100</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={editingScores[s.id]?.performance || 0}
+                      onChange={(e) => handleScoreChange(s.id, 'performance', parseInt(e.target.value))}
+                      className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-green-500"
+                    />
                   </div>
                 </div>
               </div>
