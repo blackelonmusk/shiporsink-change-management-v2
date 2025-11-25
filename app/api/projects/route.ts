@@ -25,7 +25,6 @@ export async function POST(request: Request) {
         name,
         description,
         status: 'active',
-        user_id: '00000000-0000-0000-0000-000000000000', // TODO: Replace with actual auth
       },
     ])
     .select()
