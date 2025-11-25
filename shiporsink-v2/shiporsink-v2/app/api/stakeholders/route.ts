@@ -1,0 +1,87 @@
+import { NextResponse } from 'next/server'
+import { supabase } from '@/lib/supabase'
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const projectId = searchParams.get('projectId')
+
+  if (!projectId) {
+    return NextResponse.json({ error: 'projectId required' }, { status: 400 })
+  }
+
+  const { data, error } = await supabase
+    .from('stakeholders')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json(data)
+}
+
+export async function POST(request: Request) {
+  const body = await request.json()
+  const { project_id, name, role } = body
+
+  const { data, error} = await supabase
+    .from('stakeholders')
+    .insert([
+      {
+        project_id,
+        name,
+        role,
+        engagement_score: 0,
+        performance_score: 0,
+        comments: '',
+      },
+    ])
+    .select()
+    .single()
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json(data)
+}
+
+export async function PATCH(request: Request) {
+  const body = await request.json()
+  const { id, engagement_score, performance_score, comments } = body
+
+  const { data, error } = await supabase
+    .from('stakeholders')
+    .update({ engagement_score, performance_score, comments })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json(data)
+}
+
+export async function DELETE(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+
+  if (!id) {
+    return NextResponse.json({ error: 'id required' }, { status: 400 })
+  }
+
+  const { error } = await supabase
+    .from('stakeholders')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true })
+}
