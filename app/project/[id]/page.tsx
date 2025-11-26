@@ -31,6 +31,33 @@ const STAKEHOLDER_TYPES = [
   { value: 'resistant', label: 'Resistant', color: 'bg-red-500', description: 'Actively pushes back' },
 ]
 
+const AVATAR_COLORS = [
+  'bg-blue-500',
+  'bg-green-500',
+  'bg-purple-500',
+  'bg-pink-500',
+  'bg-indigo-500',
+  'bg-teal-500',
+  'bg-orange-500',
+  'bg-cyan-500',
+]
+
+const getInitials = (name: string) => {
+  const parts = name.trim().split(' ')
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+  }
+  return name.slice(0, 2).toUpperCase()
+}
+
+const getAvatarColor = (name: string) => {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
+}
+
 export default function ProjectPage() {
   const params = useParams()
   const router = useRouter()
@@ -457,21 +484,25 @@ export default function ProjectPage() {
               <div key={s.id} className="border border-gray-700 rounded-lg p-4">
                 <div className="flex justify-between items-start mb-4">
                   <div 
-                    className="cursor-pointer hover:bg-gray-700 rounded p-1 -m-1"
+                    className="cursor-pointer hover:bg-gray-700 rounded p-1 -m-1 flex items-center gap-3"
                     onClick={() => openProfile(s)}
                   >
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-white text-lg">{s.name}</h3>
-                      {getTypeBadge((s as any).stakeholder_type)}
-                      <User className="w-4 h-4 text-gray-400" />
+                    <div className={`w-12 h-12 rounded-full ${getAvatarColor(s.name)} flex items-center justify-center text-white font-bold text-lg`}>
+                      {getInitials(s.name)}
                     </div>
-                    <p className="text-sm text-gray-400">{s.role}</p>
-                    {((s as any).email || (s as any).phone) && (
-                      <div className="flex gap-3 mt-1 text-xs text-gray-500">
-                        {(s as any).email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {(s as any).email}</span>}
-                        {(s as any).phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {(s as any).phone}</span>}
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-white text-lg">{s.name}</h3>
+                        {getTypeBadge((s as any).stakeholder_type)}
                       </div>
-                    )}
+                      <p className="text-sm text-gray-400">{s.role}</p>
+                      {((s as any).email || (s as any).phone) && (
+                        <div className="flex gap-3 mt-1 text-xs text-gray-500">
+                          {(s as any).email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {(s as any).email}</span>}
+                          {(s as any).phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {(s as any).phone}</span>}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <button
