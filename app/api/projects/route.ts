@@ -1,11 +1,20 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-export async function GET() {
-  const { data, error } = await supabase
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const userId = searchParams.get('userId')
+
+  let query = supabase
     .from('projects')
     .select('*')
     .order('created_at', { ascending: false })
+
+  if (userId) {
+    query = query.eq('user_id', userId)
+  }
+
+  const { data, error } = await query
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
@@ -16,15 +25,16 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json()
-  const { name, description } = body
+  const { name, user_id } = body
 
   const { data, error } = await supabase
     .from('projects')
     .insert([
       {
         name,
-        description,
+        user_id,
         status: 'active',
+        description: '',
       },
     ])
     .select()
