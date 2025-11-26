@@ -33,6 +33,8 @@ export default function ProjectPage() {
   const [editingStakeholder, setEditingStakeholder] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editRole, setEditRole] = useState('')
+  const [editingProjectName, setEditingProjectName] = useState(false)
+  const [projectNameEdit, setProjectNameEdit] = useState('')
 
   useEffect(() => {
     fetchData()
@@ -112,6 +114,24 @@ export default function ProjectPage() {
       method: 'DELETE',
     })
 
+    fetchData()
+  }
+
+  const startEditingProject = () => {
+    setProjectNameEdit(project?.name || '')
+    setEditingProjectName(true)
+  }
+
+  const saveProjectName = async () => {
+    if (!projectNameEdit.trim()) return
+
+    await fetch(`/api/projects/${projectId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: projectNameEdit }),
+    })
+
+    setEditingProjectName(false)
     fetchData()
   }
 
@@ -195,7 +215,39 @@ export default function ProjectPage() {
             Back to Dashboard
           </button>
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold text-white">{project.name}</h1>
+            {editingProjectName ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={projectNameEdit}
+                  onChange={(e) => setProjectNameEdit(e.target.value)}
+                  className="text-2xl font-bold px-3 py-1 rounded-lg"
+                  autoFocus
+                />
+                <button
+                  onClick={saveProjectName}
+                  className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => setEditingProjectName(false)}
+                  className="bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-500 text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <h1 className="text-3xl font-bold text-white">{project.name}</h1>
+                <button
+                  onClick={startEditingProject}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <Pencil className="w-5 h-5" />
+                </button>
+              </div>
+            )}
             <button
               onClick={() => router.push(`/project/${projectId}/report`)}
               className="flex items-center gap-2 bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
