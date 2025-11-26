@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2, Pencil, Mail, Phone, User, MessageCircle, Users, UserPlus } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import AIChat from '@/components/AIChat'
+import Header from '@/components/Header'
 import type { Project, Stakeholder, ProjectAnalytics } from '@/lib/types'
 
 interface ScoreHistory {
@@ -324,68 +325,68 @@ export default function ProjectPage() {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      <header className="bg-gray-800 border-b border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="flex items-center gap-2 text-gray-400 hover:text-white mb-4"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Back to Dashboard
-          </button>
-          <div className="flex items-center justify-between">
-            {editingProjectName ? (
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={projectNameEdit}
-                  onChange={(e) => setProjectNameEdit(e.target.value)}
-                  className="text-2xl font-bold px-3 py-1 rounded-lg"
-                  autoFocus
-                />
-                <button
-                  onClick={saveProjectName}
-                  className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm"
-                >
-                  Save
-                </button>
-                <button
-                  onClick={() => setEditingProjectName(false)}
-                  className="bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-500 text-sm"
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <h1 className="text-3xl font-bold text-white">{project.name}</h1>
-                <button
-                  onClick={startEditingProject}
-                  className="text-gray-400 hover:text-white"
-                >
-                  <Pencil className="w-5 h-5" />
-                </button>
-              </div>
-            )}
-            <div className="flex gap-2">
+      <Header />
+      
+      <div className="max-w-7xl mx-auto px-4 py-4">
+        <button
+          onClick={() => router.push('/dashboard')}
+          className="flex items-center gap-2 text-gray-400 hover:text-white mb-4"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          Back to Dashboard
+        </button>
+        <div className="flex items-center justify-between">
+          {editingProjectName ? (
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={projectNameEdit}
+                onChange={(e) => setProjectNameEdit(e.target.value)}
+                className="text-2xl font-bold px-3 py-1 rounded-lg"
+                autoFocus
+              />
               <button
-                onClick={() => setShowTeamModal(true)}
-                className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
+                onClick={saveProjectName}
+                className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm"
               >
-                <Users className="w-5 h-5" />
-                Team {teamMembers.length > 0 && `(${teamMembers.length})`}
+                Save
               </button>
               <button
-                onClick={() => router.push(`/project/${projectId}/report`)}
-                className="flex items-center gap-2 bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
+                onClick={() => setEditingProjectName(false)}
+                className="bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-500 text-sm"
               >
-                <FileText className="w-5 h-5" />
-                Generate Report
+                Cancel
               </button>
             </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold text-white">{project.name}</h1>
+              <button
+                onClick={startEditingProject}
+                className="text-gray-400 hover:text-white"
+              >
+                <Pencil className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowTeamModal(true)}
+              className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
+            >
+              <Users className="w-5 h-5" />
+              Team {teamMembers.length > 0 && `(${teamMembers.length})`}
+            </button>
+            <button
+              onClick={() => router.push(`/project/${projectId}/report`)}
+              className="flex items-center gap-2 bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
+            >
+              <FileText className="w-5 h-5" />
+              Generate Report
+            </button>
           </div>
         </div>
-      </header>
+      </div>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid md:grid-cols-3 gap-6 mb-8">

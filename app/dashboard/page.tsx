@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { Plus, Pencil, Trash2, X, LogOut, Ship, Users } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Users } from 'lucide-react'
+import Header from '@/components/Header'
 import type { Project } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
 
@@ -101,11 +102,6 @@ export default function Dashboard() {
     fetchProjects(user.id, user.email || '')
   }
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push('/auth')
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -116,28 +112,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      <header className="bg-gray-800 border-b border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Ship className="w-6 h-6 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-white">Ship or Sink</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-gray-400 text-sm">
-              {user?.email}
-            </span>
-            <button
-              onClick={handleSignOut}
-              className="text-gray-400 hover:text-white flex items-center gap-2"
-            >
-              <LogOut className="w-5 h-5" />
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       <main className="max-w-7xl mx-auto px-4 py-8">
         <h2 className="text-3xl font-bold text-white mb-6">Your Projects</h2>
