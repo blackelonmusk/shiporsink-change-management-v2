@@ -60,6 +60,17 @@ const getAvatarColor = (name: string) => {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
 }
 
+const getBorderColor = (type: string) => {
+  switch (type) {
+    case 'champion': return 'border-green-500'
+    case 'early_adopter': return 'border-blue-500'
+    case 'neutral': return 'border-gray-500'
+    case 'skeptic': return 'border-yellow-500'
+    case 'resistant': return 'border-red-500'
+    default: return 'border-gray-700'
+  }
+}
+
 export default function ProjectPage() {
   const params = useParams()
   const router = useRouter()
@@ -509,7 +520,7 @@ export default function ProjectPage() {
 
           <div className="space-y-4">
             {stakeholders.map((s) => (
-              <div key={s.id} className="border border-gray-700 rounded-lg p-4">
+              <div key={s.id} className={`border-2 ${getBorderColor((s as any).stakeholder_type)} rounded-lg p-4 transition-all hover:shadow-lg hover:shadow-gray-900/50`}>
                 <div className="flex justify-between items-start mb-4">
                   <div 
                     className="cursor-pointer hover:bg-gray-700 rounded p-1 -m-1 flex items-center gap-3"
