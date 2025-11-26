@@ -487,12 +487,6 @@ export default function ProjectPage() {
                         <MessageCircle className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => startEditing(s)}
-                        className="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600 flex items-center gap-1 text-sm"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
                         onClick={() => fetchHistory(s)}
                         className="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600 flex items-center gap-1 text-sm"
                       >
