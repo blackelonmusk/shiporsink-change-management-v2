@@ -45,7 +45,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // Record initial scores in history
   await supabase.from('score_history').insert([
     {
       stakeholder_id: data.id,
@@ -59,11 +58,18 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   const body = await request.json()
-  const { id, engagement_score, performance_score, comments } = body
+  const { id, engagement_score, performance_score, comments, name, role } = body
+
+  const updateData: any = {}
+  if (engagement_score !== undefined) updateData.engagement_score = engagement_score
+  if (performance_score !== undefined) updateData.performance_score = performance_score
+  if (comments !== undefined) updateData.comments = comments
+  if (name !== undefined) updateData.name = name
+  if (role !== undefined) updateData.role = role
 
   const { data, error } = await supabase
     .from('stakeholders')
-    .update({ engagement_score, performance_score, comments })
+    .update(updateData)
     .eq('id', id)
     .select()
     .single()
@@ -72,14 +78,15 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // Record score change in history
-  await supabase.from('score_history').insert([
-    {
-      stakeholder_id: id,
-      engagement_score,
-      performance_score,
-    },
-  ])
+  if (engagement_score !== undefined || performance_score !== undefined) {
+    await supabase.from('score_history').insert([
+      {
+        stakeholder_id: id,
+        engagement_score: engagement_score ?? data.engagement_score,
+        performance_score: performance_score ?? data.performance_score,
+      },
+    ])
+  }
 
   return NextResponse.json(data)
 }
