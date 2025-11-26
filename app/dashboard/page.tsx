@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { Plus, Pencil, Trash2, X, LogOut, Ship } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, LogOut, Ship, Users } from 'lucide-react'
 import type { Project } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
 
@@ -14,6 +14,7 @@ export default function Dashboard() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [projects, setProjects] = useState<Project[]>([])
+  const [sharedProjects, setSharedProjects] = useState<Project[]>([])
   const [newProjectName, setNewProjectName] = useState('')
   const [editingProject, setEditingProject] = useState<Project | null>(null)
   const [editName, setEditName] = useState('')
@@ -31,14 +32,22 @@ export default function Dashboard() {
     }
     setUser(user)
     setLoading(false)
-    fetchProjects(user.id)
+    fetchProjects(user.id, user.email || '')
   }
 
-  const fetchProjects = async (userId: string) => {
-    const res = await fetch(`/api/projects?userId=${userId}`)
-    if (res.ok) {
-      const data = await res.json()
+  const fetchProjects = async (userId: string, email: string) => {
+    // Fetch owned projects
+    const ownedRes = await fetch(`/api/projects?userId=${userId}`)
+    if (ownedRes.ok) {
+      const data = await ownedRes.json()
       setProjects(data)
+    }
+
+    // Fetch shared projects
+    const sharedRes = await fetch(`/api/projects/shared?email=${email}`)
+    if (sharedRes.ok) {
+      const data = await sharedRes.json()
+      setSharedProjects(data)
     }
   }
 
@@ -56,7 +65,7 @@ export default function Dashboard() {
     })
 
     setNewProjectName('')
-    fetchProjects(user.id)
+    fetchProjects(user.id, user.email || '')
   }
 
   const startEditing = (project: Project) => {
@@ -78,7 +87,7 @@ export default function Dashboard() {
     })
 
     setEditingProject(null)
-    fetchProjects(user.id)
+    fetchProjects(user.id, user.email || '')
   }
 
   const deleteProject = async (project: Project) => {
@@ -89,7 +98,7 @@ export default function Dashboard() {
       method: 'DELETE',
     })
 
-    fetchProjects(user.id)
+    fetchProjects(user.id, user.email || '')
   }
 
   const handleSignOut = async () => {
@@ -192,6 +201,43 @@ export default function Dashboard() {
           <p className="text-center text-gray-500 py-8">
             No projects yet. Create your first one above!
           </p>
+        )}
+
+        {/* Shared Projects Section */}
+        {sharedProjects.length > 0 && (
+          <>
+            <h2 className="text-3xl font-bold text-white mb-6 mt-12 flex items-center gap-3">
+              <Users className="w-8 h-8 text-purple-400" />
+              Shared With You
+            </h2>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {sharedProjects.map((project) => (
+                <div
+                  key={project.id}
+                  className="bg-gray-800 rounded-lg p-6 border border-purple-700 hover:border-purple-600 transition-colors"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 
+                      onClick={() => router.push(`/project/${project.id}`)}
+                      className="text-xl font-semibold text-white cursor-pointer hover:text-purple-400"
+                    >
+                      {project.name}
+                    </h3>
+                    <span className="text-xs bg-purple-600 text-white px-2 py-1 rounded">
+                      Shared
+                    </span>
+                  </div>
+                  {project.description && (
+                    <p className="text-gray-400 text-sm mb-3">{project.description}</p>
+                  )}
+                  <p className="text-gray-500 text-sm">
+                    Status: {project.status || 'active'}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </main>
 
