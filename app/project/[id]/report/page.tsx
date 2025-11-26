@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Download, TrendingUp, TrendingDown, Minus } from 'lucide-react'
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts'
 import type { Project, Stakeholder, ProjectAnalytics } from '@/lib/types'
 
 interface ScoreHistory {
@@ -13,6 +13,14 @@ interface ScoreHistory {
   performance_score: number
   recorded_at: string
 }
+
+const STAKEHOLDER_TYPES = [
+  { value: 'champion', label: 'Champion', color: '#22c55e' },
+  { value: 'early_adopter', label: 'Early Adopter', color: '#3b82f6' },
+  { value: 'neutral', label: 'Neutral', color: '#6b7280' },
+  { value: 'skeptic', label: 'Skeptic', color: '#eab308' },
+  { value: 'resistant', label: 'Resistant', color: '#ef4444' },
+]
 
 export default function ReportPage() {
   const params = useParams()
@@ -100,12 +108,30 @@ export default function ReportPage() {
     return 'neutral'
   }
 
+  const getTypeInfo = (type: string) => {
+    return STAKEHOLDER_TYPES.find(t => t.value === type) || { value: '', label: 'Not Set', color: '#6b7280' }
+  }
+
+  const getTypeDistribution = () => {
+    const distribution: {[key: string]: number} = {}
+    stakeholders.forEach(s => {
+      const type = (s as any).stakeholder_type || 'not_set'
+      distribution[type] = (distribution[type] || 0) + 1
+    })
+    return Object.entries(distribution).map(([type, count]) => ({
+      name: type === 'not_set' ? 'Not Set' : getTypeInfo(type).label,
+      value: count,
+      color: type === 'not_set' ? '#6b7280' : getTypeInfo(type).color,
+    }))
+  }
+
   const stakeholderChartData = stakeholders.map(s => ({
     name: s.name.split(' ')[0],
     engagement: s.engagement_score,
     performance: s.performance_score,
   }))
 
+  const typeDistribution = getTypeDistribution()
   const readinessScore = getChangeReadinessScore()
   const reportDate = new Date().toLocaleDateString('en-US', { 
     year: 'numeric', 
@@ -184,6 +210,55 @@ export default function ReportPage() {
           </div>
         </section>
 
+        {/* Stakeholder Type Distribution */}
+        {stakeholders.length > 0 && (
+          <section className="mb-10">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 border-l-4 border-blue-600 pl-3">
+              Stakeholder Type Distribution
+            </h3>
+            <div className="grid grid-cols-2 gap-6">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="h-48 flex items-center justify-center">
+                  <PieChart width={180} height={180}>
+                    <Pie
+                      data={typeDistribution}
+                      cx={90}
+                      cy={90}
+                      innerRadius={40}
+                      outerRadius={80}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {typeDistribution.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="space-y-2">
+                  {typeDistribution.map((item, i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                        <span className="text-gray-700">{item.name}</span>
+                      </div>
+                      <span className="font-semibold text-gray-900">{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <p className="text-sm text-gray-600">
+                    {typeDistribution.find(t => t.name === 'Champion')?.value || 0} Champions, {' '}
+                    {typeDistribution.find(t => t.name === 'Resistant')?.value || 0} Resistant
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Stakeholder Overview Chart */}
         {stakeholders.length > 0 && (
           <section className="mb-10">
@@ -224,9 +299,9 @@ export default function ReportPage() {
               <tr className="border-b-2 border-gray-200">
                 <th className="text-left py-3 text-gray-600 font-semibold">Name</th>
                 <th className="text-left py-3 text-gray-600 font-semibold">Role</th>
+                <th className="text-center py-3 text-gray-600 font-semibold">Type</th>
                 <th className="text-center py-3 text-gray-600 font-semibold">Engagement</th>
-                <th className="text-center py-3 text-gray-600 font-semibold">Performance</th>
-                <th className="text-center py-3 text-gray-600 font-semibold">ADKAR Stage</th>
+                <th className="text-center py-3 text-gray-600 font-semibold">ADKAR</th>
                 <th className="text-center py-3 text-gray-600 font-semibold">Trend</th>
               </tr>
             </thead>
@@ -234,23 +309,25 @@ export default function ReportPage() {
               {stakeholders.map(s => {
                 const adkar = getADKARStage(s.engagement_score)
                 const trend = getTrend(s.id)
+                const typeInfo = getTypeInfo((s as any).stakeholder_type)
                 return (
                   <tr key={s.id} className="border-b border-gray-100">
                     <td className="py-3 font-medium">{s.name}</td>
                     <td className="py-3 text-gray-600">{s.role}</td>
+                    <td className="py-3 text-center">
+                      <span 
+                        className="text-xs px-2 py-1 rounded-full text-white"
+                        style={{ backgroundColor: typeInfo.color }}
+                      >
+                        {typeInfo.label}
+                      </span>
+                    </td>
                     <td className="py-3 text-center">
                       <span className={`font-semibold ${
                         s.engagement_score >= 60 ? 'text-green-600' :
                         s.engagement_score >= 40 ? 'text-yellow-600' :
                         'text-red-600'
                       }`}>{s.engagement_score}%</span>
-                    </td>
-                    <td className="py-3 text-center">
-                      <span className={`font-semibold ${
-                        s.performance_score >= 60 ? 'text-green-600' :
-                        s.performance_score >= 40 ? 'text-yellow-600' :
-                        'text-red-600'
-                      }`}>{s.performance_score}%</span>
                     </td>
                     <td className={`py-3 text-center font-medium ${adkar.color}`}>
                       {adkar.stage}
@@ -273,10 +350,16 @@ export default function ReportPage() {
             Key Recommendations
           </h3>
           <div className="bg-blue-50 rounded-lg p-6 space-y-3">
+            {stakeholders.filter(s => (s as any).stakeholder_type === 'resistant').length > 0 && (
+              <div className="flex gap-3">
+                <span className="text-red-600 font-bold">!</span>
+                <p><strong>Critical:</strong> {stakeholders.filter(s => (s as any).stakeholder_type === 'resistant').length} resistant stakeholder(s) identified. Prioritize direct conversations to understand their concerns and address root causes.</p>
+              </div>
+            )}
             {stakeholders.filter(s => s.engagement_score < 40).length > 0 && (
               <div className="flex gap-3">
                 <span className="text-red-600 font-bold">!</span>
-                <p><strong>Critical:</strong> {stakeholders.filter(s => s.engagement_score < 40).length} stakeholder(s) have engagement below 40%. Prioritize direct conversations to understand their resistance.</p>
+                <p><strong>Critical:</strong> {stakeholders.filter(s => s.engagement_score < 40).length} stakeholder(s) have engagement below 40%. These individuals need immediate attention.</p>
               </div>
             )}
             {readinessScore < 50 && (
@@ -289,6 +372,12 @@ export default function ReportPage() {
               <div className="flex gap-3">
                 <span className="text-blue-600 font-bold">ℹ</span>
                 <p><strong>Focus Area:</strong> Some stakeholders are still at the Awareness stage. Increase communication about why this change is necessary.</p>
+              </div>
+            )}
+            {stakeholders.filter(s => (s as any).stakeholder_type === 'champion').length > 0 && (
+              <div className="flex gap-3">
+                <span className="text-green-600 font-bold">✓</span>
+                <p><strong>Leverage:</strong> You have {stakeholders.filter(s => (s as any).stakeholder_type === 'champion').length} Champion(s). Engage them to help influence resistant stakeholders and spread positive messaging.</p>
               </div>
             )}
             {readinessScore >= 60 && (
