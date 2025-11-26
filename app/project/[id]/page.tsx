@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2, Pencil, Mail, Phone, User, MessageCircle } from 'lucide-react'
+import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2, Pencil, Mail, Phone, User, MessageCircle, Users, UserPlus } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import AIChat from '@/components/AIChat'
 import type { Project, Stakeholder, ProjectAnalytics } from '@/lib/types'
@@ -13,6 +13,12 @@ interface ScoreHistory {
   engagement_score: number
   performance_score: number
   recorded_at: string
+}
+
+interface TeamMember {
+  id: string
+  invited_email: string
+  created_at: string
 }
 
 const STAKEHOLDER_TYPES = [
@@ -60,15 +66,22 @@ export default function ProjectPage() {
   const [conversationStarters, setConversationStarters] = useState('')
   const [loadingConversation, setLoadingConversation] = useState(false)
 
+  // Team sharing state
+  const [showTeamModal, setShowTeamModal] = useState(false)
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteLoading, setInviteLoading] = useState(false)
+
   useEffect(() => {
     fetchData()
   }, [projectId])
 
   const fetchData = async () => {
-    const [projectRes, stakeholdersRes, analyticsRes] = await Promise.all([
+    const [projectRes, stakeholdersRes, analyticsRes, teamRes] = await Promise.all([
       fetch(`/api/projects/${projectId}`),
       fetch(`/api/stakeholders?projectId=${projectId}`),
       fetch(`/api/analytics?projectId=${projectId}`),
+      fetch(`/api/team?projectId=${projectId}`),
     ])
 
     if (projectRes.ok) setProject(await projectRes.json())
@@ -82,6 +95,7 @@ export default function ProjectPage() {
       setEditingScores(scores)
     }
     if (analyticsRes.ok) setAnalytics(await analyticsRes.json())
+    if (teamRes.ok) setTeamMembers(await teamRes.json())
   }
 
   const fetchHistory = async (stakeholder: Stakeholder) => {
@@ -166,6 +180,34 @@ export default function ProjectPage() {
     setLoadingConversation(false)
   }
 
+  const inviteTeamMember = async () => {
+    if (!inviteEmail.trim()) return
+    setInviteLoading(true)
+
+    await fetch('/api/team', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        project_id: projectId,
+        invited_email: inviteEmail.toLowerCase().trim(),
+      }),
+    })
+
+    setInviteEmail('')
+    setInviteLoading(false)
+    fetchData()
+  }
+
+  const removeTeamMember = async (memberId: string) => {
+    if (!confirm('Remove this team member?')) return
+
+    await fetch(`/api/team?id=${memberId}`, {
+      method: 'DELETE',
+    })
+
+    fetchData()
+  }
+
   const addStakeholder = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newStakeholderName.trim() || !newStakeholderRole.trim()) return
@@ -227,37 +269,6 @@ export default function ProjectPage() {
     })
 
     setEditingProjectName(false)
-    fetchData()
-  }
-
-  const startEditing = (s: Stakeholder) => {
-    setEditingStakeholder(s.id)
-    setEditName(s.name)
-    setEditRole(s.role)
-  }
-
-  const cancelEditing = () => {
-    setEditingStakeholder(null)
-    setEditName('')
-    setEditRole('')
-  }
-
-  const saveStakeholderEdit = async (stakeholderId: string) => {
-    if (!editName.trim() || !editRole.trim()) return
-
-    await fetch('/api/stakeholders', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: stakeholderId,
-        name: editName,
-        role: editRole,
-      }),
-    })
-
-    setEditingStakeholder(null)
-    setEditName('')
-    setEditRole('')
     fetchData()
   }
 
@@ -356,13 +367,22 @@ export default function ProjectPage() {
                 </button>
               </div>
             )}
-            <button
-              onClick={() => router.push(`/project/${projectId}/report`)}
-              className="flex items-center gap-2 bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
-            >
-              <FileText className="w-5 h-5" />
-              Generate Report
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowTeamModal(true)}
+                className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
+              >
+                <Users className="w-5 h-5" />
+                Team {teamMembers.length > 0 && `(${teamMembers.length})`}
+              </button>
+              <button
+                onClick={() => router.push(`/project/${projectId}/report`)}
+                className="flex items-center gap-2 bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
+              >
+                <FileText className="w-5 h-5" />
+                Generate Report
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -429,85 +449,52 @@ export default function ProjectPage() {
             {stakeholders.map((s) => (
               <div key={s.id} className="border border-gray-700 rounded-lg p-4">
                 <div className="flex justify-between items-start mb-4">
-                  {editingStakeholder === s.id ? (
-                    <div className="flex gap-2 flex-1 mr-4">
-                      <input
-                        type="text"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        className="flex-1 px-3 py-1 rounded"
-                        placeholder="Name..."
-                      />
-                      <input
-                        type="text"
-                        value={editRole}
-                        onChange={(e) => setEditRole(e.target.value)}
-                        className="flex-1 px-3 py-1 rounded"
-                        placeholder="Role..."
-                      />
-                      <button
-                        onClick={() => saveStakeholderEdit(s.id)}
-                        className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={cancelEditing}
-                        className="bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-500 text-sm"
-                      >
-                        Cancel
-                      </button>
+                  <div 
+                    className="cursor-pointer hover:bg-gray-700 rounded p-1 -m-1"
+                    onClick={() => openProfile(s)}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-white text-lg">{s.name}</h3>
+                      {getTypeBadge((s as any).stakeholder_type)}
+                      <User className="w-4 h-4 text-gray-400" />
                     </div>
-                  ) : (
-                    <div 
-                      className="cursor-pointer hover:bg-gray-700 rounded p-1 -m-1"
-                      onClick={() => openProfile(s)}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-white text-lg">{s.name}</h3>
-                        {getTypeBadge((s as any).stakeholder_type)}
-                        <User className="w-4 h-4 text-gray-400" />
+                    <p className="text-sm text-gray-400">{s.role}</p>
+                    {((s as any).email || (s as any).phone) && (
+                      <div className="flex gap-3 mt-1 text-xs text-gray-500">
+                        {(s as any).email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {(s as any).email}</span>}
+                        {(s as any).phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {(s as any).phone}</span>}
                       </div>
-                      <p className="text-sm text-gray-400">{s.role}</p>
-                      {((s as any).email || (s as any).phone) && (
-                        <div className="flex gap-3 mt-1 text-xs text-gray-500">
-                          {(s as any).email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {(s as any).email}</span>}
-                          {(s as any).phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {(s as any).phone}</span>}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {editingStakeholder !== s.id && (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => getConversationStarters(s)}
-                        className="bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700 flex items-center gap-1 text-sm"
-                        title="Get conversation starters"
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => fetchHistory(s)}
-                        className="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600 flex items-center gap-1 text-sm"
-                      >
-                        <TrendingUp className="w-4 h-4" />
-                        Trends
-                      </button>
-                      <button
-                        onClick={() => updateScores(s.id)}
-                        className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 flex items-center gap-1 text-sm"
-                      >
-                        <Save className="w-4 h-4" />
-                        Save
-                      </button>
-                      <button
-                        onClick={() => deleteStakeholder(s.id, s.name)}
-                        className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 flex items-center gap-1 text-sm"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => getConversationStarters(s)}
+                      className="bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700 flex items-center gap-1 text-sm"
+                      title="Get conversation starters"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => fetchHistory(s)}
+                      className="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600 flex items-center gap-1 text-sm"
+                    >
+                      <TrendingUp className="w-4 h-4" />
+                      Trends
+                    </button>
+                    <button
+                      onClick={() => updateScores(s.id)}
+                      className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 flex items-center gap-1 text-sm"
+                    >
+                      <Save className="w-4 h-4" />
+                      Save
+                    </button>
+                    <button
+                      onClick={() => deleteStakeholder(s.id, s.name)}
+                      className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 flex items-center gap-1 text-sm"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="space-y-3">
@@ -552,6 +539,76 @@ export default function ProjectPage() {
           )}
         </div>
       </main>
+
+      {/* Team Modal */}
+      {showTeamModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Users className="w-6 h-6 text-purple-400" />
+                Team Members
+              </h2>
+              <button onClick={() => setShowTeamModal(false)} className="text-gray-400 hover:text-white">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-gray-400 text-sm mb-2">Invite by email</label>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="colleague@example.com"
+                  className="flex-1 px-4 py-2 rounded-lg"
+                />
+                <button
+                  onClick={inviteTeamMember}
+                  disabled={inviteLoading || !inviteEmail.trim()}
+                  className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 disabled:bg-gray-600 flex items-center gap-1"
+                >
+                  <UserPlus className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-gray-500 text-xs mt-2">
+                They'll see this project in their "Shared With You" section
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              {teamMembers.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No team members yet</p>
+              ) : (
+                teamMembers.map(member => (
+                  <div key={member.id} className="flex items-center justify-between bg-gray-700 rounded-lg px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-gray-400" />
+                      <span className="text-white">{member.invited_email}</span>
+                    </div>
+                    <button
+                      onClick={() => removeTeamMember(member.id)}
+                      className="text-gray-400 hover:text-red-500"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="mt-6">
+              <button
+                onClick={() => setShowTeamModal(false)}
+                className="w-full bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-500"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stakeholder Profile Modal */}
       {showProfile && profileStakeholder && (
