@@ -580,14 +580,22 @@ export default function ProjectPage() {
                       <span className="text-gray-400">Engagement</span>
                       <span className="text-white font-medium">{editingScores[s.id]?.engagement || 0}/100</span>
                     </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={editingScores[s.id]?.engagement || 0}
-                      onChange={(e) => handleScoreChange(s.id, 'engagement', parseInt(e.target.value))}
-                      className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                    />
+                    <div className="relative">
+                      <div className="h-3 bg-gray-700 rounded-full overflow-hidden mb-1">
+                        <div 
+                          className="h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full transition-all duration-300"
+                          style={{ width: `${editingScores[s.id]?.engagement || 0}%` }}
+                        />
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={editingScores[s.id]?.engagement || 0}
+                        onChange={(e) => handleScoreChange(s.id, 'engagement', parseInt(e.target.value))}
+                        className="w-full h-2 bg-transparent rounded-lg appearance-none cursor-pointer absolute top-0 opacity-0"
+                      />
+                    </div>
                   </div>
                   
                   <div>
@@ -595,14 +603,22 @@ export default function ProjectPage() {
                       <span className="text-gray-400">Performance</span>
                       <span className="text-white font-medium">{editingScores[s.id]?.performance || 0}/100</span>
                     </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={editingScores[s.id]?.performance || 0}
-                      onChange={(e) => handleScoreChange(s.id, 'performance', parseInt(e.target.value))}
-                      className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-green-500"
-                    />
+                    <div className="relative">
+                      <div className="h-3 bg-gray-700 rounded-full overflow-hidden mb-1">
+                        <div 
+                          className="h-full bg-gradient-to-r from-green-600 to-green-400 rounded-full transition-all duration-300"
+                          style={{ width: `${editingScores[s.id]?.performance || 0}%` }}
+                        />
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={editingScores[s.id]?.performance || 0}
+                        onChange={(e) => handleScoreChange(s.id, 'performance', parseInt(e.target.value))}
+                        className="w-full h-2 bg-transparent rounded-lg appearance-none cursor-pointer absolute top-0 opacity-0"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
