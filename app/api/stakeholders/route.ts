@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   const body = await request.json()
   const { project_id, name, role } = body
 
-  const { data, error} = await supabase
+  const { data, error } = await supabase
     .from('stakeholders')
     .insert([
       {
@@ -45,6 +45,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  // Record initial scores in history
+  await supabase.from('score_history').insert([
+    {
+      stakeholder_id: data.id,
+      engagement_score: 0,
+      performance_score: 0,
+    },
+  ])
+
   return NextResponse.json(data)
 }
 
@@ -62,6 +71,15 @@ export async function PATCH(request: Request) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  // Record score change in history
+  await supabase.from('score_history').insert([
+    {
+      stakeholder_id: id,
+      engagement_score,
+      performance_score,
+    },
+  ])
 
   return NextResponse.json(data)
 }
