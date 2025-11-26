@@ -2,11 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Pencil, Trash2, X } from 'lucide-react'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { Plus, Pencil, Trash2, X, LogOut, Ship } from 'lucide-react'
 import type { Project } from '@/lib/types'
+import type { User } from '@supabase/supabase-js'
 
 export default function Dashboard() {
   const router = useRouter()
+  const supabase = createClientComponentClient()
+  
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
   const [projects, setProjects] = useState<Project[]>([])
   const [newProjectName, setNewProjectName] = useState('')
   const [editingProject, setEditingProject] = useState<Project | null>(null)
@@ -14,11 +20,22 @@ export default function Dashboard() {
   const [editDescription, setEditDescription] = useState('')
 
   useEffect(() => {
-    fetchProjects()
+    checkUser()
   }, [])
 
-  const fetchProjects = async () => {
-    const res = await fetch('/api/projects')
+  const checkUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      router.push('/auth')
+      return
+    }
+    setUser(user)
+    setLoading(false)
+    fetchProjects(user.id)
+  }
+
+  const fetchProjects = async (userId: string) => {
+    const res = await fetch(`/api/projects?userId=${userId}`)
     if (res.ok) {
       const data = await res.json()
       setProjects(data)
@@ -27,16 +44,19 @@ export default function Dashboard() {
 
   const createProject = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newProjectName.trim()) return
+    if (!newProjectName.trim() || !user) return
 
     await fetch('/api/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newProjectName }),
+      body: JSON.stringify({ 
+        name: newProjectName,
+        user_id: user.id 
+      }),
     })
 
     setNewProjectName('')
-    fetchProjects()
+    fetchProjects(user.id)
   }
 
   const startEditing = (project: Project) => {
@@ -46,7 +66,7 @@ export default function Dashboard() {
   }
 
   const saveProject = async () => {
-    if (!editingProject || !editName.trim()) return
+    if (!editingProject || !editName.trim() || !user) return
 
     await fetch(`/api/projects/${editingProject.id}`, {
       method: 'PATCH',
@@ -58,27 +78,55 @@ export default function Dashboard() {
     })
 
     setEditingProject(null)
-    fetchProjects()
+    fetchProjects(user.id)
   }
 
   const deleteProject = async (project: Project) => {
     if (!confirm(`Delete "${project.name}"? This will delete all stakeholders and cannot be undone.`)) return
+    if (!user) return
 
     await fetch(`/api/projects/${project.id}`, {
       method: 'DELETE',
     })
 
-    fetchProjects()
+    fetchProjects(user.id)
+  }
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push('/auth')
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen bg-gray-900">
       <header className="bg-gray-800 border-b border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-xl">⛵</span>
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+              <Ship className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-white">Ship or Sink</h1>
           </div>
-          <h1 className="text-2xl font-bold text-white">Ship or Sink</h1>
+          <div className="flex items-center gap-4">
+            <span className="text-gray-400 text-sm">
+              {user?.email}
+            </span>
+            <button
+              onClick={handleSignOut}
+              className="text-gray-400 hover:text-white flex items-center gap-2"
+            >
+              <LogOut className="w-5 h-5" />
+              Sign Out
+            </button>
+          </div>
         </div>
       </header>
 
