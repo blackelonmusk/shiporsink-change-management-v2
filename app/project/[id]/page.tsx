@@ -7,6 +7,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import toast from 'react-hot-toast'
 import AIChat from '@/components/AIChat'
 import Header from '@/components/Header'
+import { SkeletonCard, SkeletonStats } from '@/components/Skeleton'
 import type { Project, Stakeholder, ProjectAnalytics } from '@/lib/types'
 
 interface ScoreHistory {
@@ -66,6 +67,7 @@ export default function ProjectPage() {
   const [project, setProject] = useState<Project | null>(null)
   const [stakeholders, setStakeholders] = useState<Stakeholder[]>([])
   const [analytics, setAnalytics] = useState<ProjectAnalytics | null>(null)
+  const [loading, setLoading] = useState(true)
   const [newStakeholderName, setNewStakeholderName] = useState('')
   const [newStakeholderRole, setNewStakeholderRole] = useState('')
   const [isChatOpen, setIsChatOpen] = useState(false)
@@ -125,6 +127,7 @@ export default function ProjectPage() {
     }
     if (analyticsRes.ok) setAnalytics(await analyticsRes.json())
     if (teamRes.ok) setTeamMembers(await teamRes.json())
+    setLoading(false)
   }
 
   const fetchHistory = async (stakeholder: Stakeholder) => {
@@ -354,7 +357,25 @@ export default function ProjectPage() {
     })),
   }
 
-  if (!project) return <div className="p-8 text-white">Loading...</div>
+  if (loading || !project) {
+    return (
+      <div className="min-h-screen bg-gray-900">
+        <Header />
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="h-8 bg-gray-700 rounded w-48 mb-8 animate-pulse" />
+          <SkeletonStats />
+          <div className="bg-gray-800 p-6 rounded-lg">
+            <div className="h-6 bg-gray-700 rounded w-32 mb-6 animate-pulse" />
+            <div className="space-y-4">
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-900">
