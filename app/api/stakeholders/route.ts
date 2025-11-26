@@ -70,6 +70,7 @@ export async function PATCH(request: Request) {
   if (role !== undefined) updateData.role = role
   if (email !== undefined) updateData.email = email
   if (phone !== undefined) updateData.phone = phone
+  if (body.stakeholder_type !== undefined) updateData.stakeholder_type = body.stakeholder_type
 
   const { data, error } = await supabase
     .from('stakeholders')

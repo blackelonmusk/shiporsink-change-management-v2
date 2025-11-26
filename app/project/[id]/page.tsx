@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2, Pencil, Mail, Phone, User } from 'lucide-react'
+import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2, Pencil, Mail, Phone, User, MessageCircle } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import AIChat from '@/components/AIChat'
 import type { Project, Stakeholder, ProjectAnalytics } from '@/lib/types'
@@ -14,6 +14,14 @@ interface ScoreHistory {
   performance_score: number
   recorded_at: string
 }
+
+const STAKEHOLDER_TYPES = [
+  { value: 'champion', label: 'Champion', color: 'bg-green-500', description: 'Actively promotes change' },
+  { value: 'early_adopter', label: 'Early Adopter', color: 'bg-blue-500', description: 'Quick to embrace new things' },
+  { value: 'neutral', label: 'Neutral', color: 'bg-gray-500', description: 'Waits to see how things go' },
+  { value: 'skeptic', label: 'Skeptic', color: 'bg-yellow-500', description: 'Questions everything, needs proof' },
+  { value: 'resistant', label: 'Resistant', color: 'bg-red-500', description: 'Actively pushes back' },
+]
 
 export default function ProjectPage() {
   const params = useParams()
@@ -44,6 +52,13 @@ export default function ProjectPage() {
   const [profileEmail, setProfileEmail] = useState('')
   const [profilePhone, setProfilePhone] = useState('')
   const [profileComments, setProfileComments] = useState('')
+  const [profileType, setProfileType] = useState('')
+  
+  // Conversation starters state
+  const [showConversation, setShowConversation] = useState(false)
+  const [conversationStakeholder, setConversationStakeholder] = useState<Stakeholder | null>(null)
+  const [conversationStarters, setConversationStarters] = useState('')
+  const [loadingConversation, setLoadingConversation] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -86,6 +101,7 @@ export default function ProjectPage() {
     setProfileEmail((s as any).email || '')
     setProfilePhone((s as any).phone || '')
     setProfileComments(s.comments || '')
+    setProfileType((s as any).stakeholder_type || '')
     setShowProfile(true)
   }
 
@@ -102,11 +118,52 @@ export default function ProjectPage() {
         email: profileEmail,
         phone: profilePhone,
         comments: profileComments,
+        stakeholder_type: profileType,
       }),
     })
 
     setShowProfile(false)
     fetchData()
+  }
+
+  const getConversationStarters = async (s: Stakeholder) => {
+    setConversationStakeholder(s)
+    setShowConversation(true)
+    setLoadingConversation(true)
+    setConversationStarters('')
+
+    const typeLabel = STAKEHOLDER_TYPES.find(t => t.value === (s as any).stakeholder_type)?.label || 'Unknown'
+
+    try {
+      const response = await fetch('https://shiporsink-ai-api.vercel.app/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: `Give me 5 specific conversation starters for ${s.name} (${s.role}, ${typeLabel} type). Their engagement is ${s.engagement_score}/100 and performance is ${s.performance_score}/100. Notes about them: ${s.comments || 'No notes yet'}. Format as a numbered list with the exact phrases I should say in quotes, followed by a brief explanation of why each works.`,
+          projectContext: {
+            projectName: project?.name || '',
+            status: project?.status || '',
+            riskLevel: analytics?.riskAssessment || 0,
+            totalEngagement: analytics?.engagementLevel || 0,
+            stakeholders: [{
+              name: s.name,
+              role: s.role,
+              engagement: s.engagement_score,
+              performance: s.performance_score,
+              comments: s.comments || '',
+              stakeholder_type: (s as any).stakeholder_type || '',
+            }]
+          }
+        })
+      })
+
+      const data = await response.json()
+      setConversationStarters(data.response)
+    } catch (error) {
+      setConversationStarters('Sorry, I encountered an error generating conversation starters. Please try again.')
+    }
+
+    setLoadingConversation(false)
   }
 
   const addStakeholder = async (e: React.FormEvent) => {
@@ -225,6 +282,16 @@ export default function ProjectPage() {
     performance: h.performance_score,
   }))
 
+  const getTypeBadge = (type: string) => {
+    const typeInfo = STAKEHOLDER_TYPES.find(t => t.value === type)
+    if (!typeInfo) return null
+    return (
+      <span className={`${typeInfo.color} text-white text-xs px-2 py-0.5 rounded-full`}>
+        {typeInfo.label}
+      </span>
+    )
+  }
+
   const projectContext = {
     projectName: project?.name || '',
     status: project?.status || '',
@@ -238,6 +305,7 @@ export default function ProjectPage() {
       comments: s.comments || '',
       email: (s as any).email || '',
       phone: (s as any).phone || '',
+      stakeholder_type: (s as any).stakeholder_type || '',
     })),
   }
 
@@ -395,10 +463,11 @@ export default function ProjectPage() {
                       className="cursor-pointer hover:bg-gray-700 rounded p-1 -m-1"
                       onClick={() => openProfile(s)}
                     >
-                      <h3 className="font-semibold text-white text-lg flex items-center gap-2">
-                        {s.name}
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-white text-lg">{s.name}</h3>
+                        {getTypeBadge((s as any).stakeholder_type)}
                         <User className="w-4 h-4 text-gray-400" />
-                      </h3>
+                      </div>
                       <p className="text-sm text-gray-400">{s.role}</p>
                       {((s as any).email || (s as any).phone) && (
                         <div className="flex gap-3 mt-1 text-xs text-gray-500">
@@ -410,6 +479,13 @@ export default function ProjectPage() {
                   )}
                   {editingStakeholder !== s.id && (
                     <div className="flex gap-2">
+                      <button
+                        onClick={() => getConversationStarters(s)}
+                        className="bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700 flex items-center gap-1 text-sm"
+                        title="Get conversation starters"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                      </button>
                       <button
                         onClick={() => startEditing(s)}
                         className="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600 flex items-center gap-1 text-sm"
@@ -486,7 +562,7 @@ export default function ProjectPage() {
       {/* Stakeholder Profile Modal */}
       {showProfile && profileStakeholder && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-xl w-full max-w-md p-6">
+          <div className="bg-gray-800 rounded-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <User className="w-6 h-6 text-blue-400" />
@@ -515,6 +591,19 @@ export default function ProjectPage() {
                   onChange={(e) => setProfileRole(e.target.value)}
                   className="w-full px-4 py-2 rounded-lg"
                 />
+              </div>
+              <div>
+                <label className="block text-gray-400 text-sm mb-1">Stakeholder Type</label>
+                <select
+                  value={profileType}
+                  onChange={(e) => setProfileType(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg bg-white text-black"
+                >
+                  <option value="">Select a type...</option>
+                  {STAKEHOLDER_TYPES.map(t => (
+                    <option key={t.value} value={t.value}>{t.label} - {t.description}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-gray-400 text-sm mb-1 flex items-center gap-1">
@@ -564,6 +653,46 @@ export default function ProjectPage() {
                 className="flex-1 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-500"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Conversation Starters Modal */}
+      {showConversation && conversationStakeholder && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-xl w-full max-w-2xl p-6 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <MessageCircle className="w-6 h-6 text-purple-400" />
+                Conversation Starters for {conversationStakeholder.name}
+              </h2>
+              <button onClick={() => setShowConversation(false)} className="text-gray-400 hover:text-white">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {loadingConversation ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="flex gap-2">
+                  <div className="w-3 h-3 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-3 h-3 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-3 h-3 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            ) : (
+              <div className="prose prose-invert max-w-none">
+                <p className="text-gray-300 whitespace-pre-wrap">{conversationStarters}</p>
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowConversation(false)}
+                className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-500"
+              >
+                Close
               </button>
             </div>
           </div>
