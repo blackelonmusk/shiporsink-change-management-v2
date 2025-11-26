@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2, Pencil } from 'lucide-react'
+import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2, Pencil, Mail, Phone, User } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import AIChat from '@/components/AIChat'
 import type { Project, Stakeholder, ProjectAnalytics } from '@/lib/types'
@@ -35,6 +35,15 @@ export default function ProjectPage() {
   const [editRole, setEditRole] = useState('')
   const [editingProjectName, setEditingProjectName] = useState(false)
   const [projectNameEdit, setProjectNameEdit] = useState('')
+  
+  // Stakeholder profile modal state
+  const [showProfile, setShowProfile] = useState(false)
+  const [profileStakeholder, setProfileStakeholder] = useState<Stakeholder | null>(null)
+  const [profileName, setProfileName] = useState('')
+  const [profileRole, setProfileRole] = useState('')
+  const [profileEmail, setProfileEmail] = useState('')
+  const [profilePhone, setProfilePhone] = useState('')
+  const [profileComments, setProfileComments] = useState('')
 
   useEffect(() => {
     fetchData()
@@ -70,6 +79,36 @@ export default function ProjectPage() {
     }
   }
 
+  const openProfile = (s: Stakeholder) => {
+    setProfileStakeholder(s)
+    setProfileName(s.name)
+    setProfileRole(s.role)
+    setProfileEmail((s as any).email || '')
+    setProfilePhone((s as any).phone || '')
+    setProfileComments(s.comments || '')
+    setShowProfile(true)
+  }
+
+  const saveProfile = async () => {
+    if (!profileStakeholder) return
+
+    await fetch('/api/stakeholders', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: profileStakeholder.id,
+        name: profileName,
+        role: profileRole,
+        email: profileEmail,
+        phone: profilePhone,
+        comments: profileComments,
+      }),
+    })
+
+    setShowProfile(false)
+    fetchData()
+  }
+
   const addStakeholder = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newStakeholderName.trim() || !newStakeholderRole.trim()) return
@@ -100,7 +139,6 @@ export default function ProjectPage() {
         id: stakeholderId,
         engagement_score: scores.engagement,
         performance_score: scores.performance,
-        comments: '',
       }),
     })
 
@@ -351,9 +389,21 @@ export default function ProjectPage() {
                       </button>
                     </div>
                   ) : (
-                    <div>
-                      <h3 className="font-semibold text-white text-lg">{s.name}</h3>
+                    <div 
+                      className="cursor-pointer hover:bg-gray-700 rounded p-1 -m-1"
+                      onClick={() => openProfile(s)}
+                    >
+                      <h3 className="font-semibold text-white text-lg flex items-center gap-2">
+                        {s.name}
+                        <User className="w-4 h-4 text-gray-400" />
+                      </h3>
                       <p className="text-sm text-gray-400">{s.role}</p>
+                      {((s as any).email || (s as any).phone) && (
+                        <div className="flex gap-3 mt-1 text-xs text-gray-500">
+                          {(s as any).email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {(s as any).email}</span>}
+                          {(s as any).phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {(s as any).phone}</span>}
+                        </div>
+                      )}
                     </div>
                   )}
                   {editingStakeholder !== s.id && (
@@ -430,6 +480,93 @@ export default function ProjectPage() {
           )}
         </div>
       </main>
+
+      {/* Stakeholder Profile Modal */}
+      {showProfile && profileStakeholder && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <User className="w-6 h-6 text-blue-400" />
+                Stakeholder Profile
+              </h2>
+              <button onClick={() => setShowProfile(false)} className="text-gray-400 hover:text-white">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-gray-400 text-sm mb-1">Name</label>
+                <input
+                  type="text"
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 text-sm mb-1">Role</label>
+                <input
+                  type="text"
+                  value={profileRole}
+                  onChange={(e) => setProfileRole(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 text-sm mb-1 flex items-center gap-1">
+                  <Mail className="w-4 h-4" /> Email
+                </label>
+                <input
+                  type="email"
+                  value={profileEmail}
+                  onChange={(e) => setProfileEmail(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg"
+                  placeholder="email@example.com"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 text-sm mb-1 flex items-center gap-1">
+                  <Phone className="w-4 h-4" /> Phone
+                </label>
+                <input
+                  type="tel"
+                  value={profilePhone}
+                  onChange={(e) => setProfilePhone(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg"
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 text-sm mb-1">Notes</label>
+                <textarea
+                  value={profileComments}
+                  onChange={(e) => setProfileComments(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-2 rounded-lg"
+                  placeholder="Any notes about this stakeholder..."
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              <button
+                onClick={saveProfile}
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              >
+                Save Profile
+              </button>
+              <button
+                onClick={() => setShowProfile(false)}
+                className="flex-1 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-500"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Trends Modal */}
       {showTrends && selectedStakeholder && (

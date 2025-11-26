@@ -36,6 +36,8 @@ export async function POST(request: Request) {
         engagement_score: 0,
         performance_score: 0,
         comments: '',
+        email: '',
+        phone: '',
       },
     ])
     .select()
@@ -58,7 +60,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   const body = await request.json()
-  const { id, engagement_score, performance_score, comments, name, role } = body
+  const { id, engagement_score, performance_score, comments, name, role, email, phone } = body
 
   const updateData: any = {}
   if (engagement_score !== undefined) updateData.engagement_score = engagement_score
@@ -66,6 +68,8 @@ export async function PATCH(request: Request) {
   if (comments !== undefined) updateData.comments = comments
   if (name !== undefined) updateData.name = name
   if (role !== undefined) updateData.role = role
+  if (email !== undefined) updateData.email = email
+  if (phone !== undefined) updateData.phone = phone
 
   const { data, error } = await supabase
     .from('stakeholders')
