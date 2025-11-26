@@ -2,9 +2,18 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Sparkles, Save } from 'lucide-react'
+import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X } from 'lucide-react'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import AIChat from '@/components/AIChat'
 import type { Project, Stakeholder, ProjectAnalytics } from '@/lib/types'
+
+interface ScoreHistory {
+  id: string
+  stakeholder_id: string
+  engagement_score: number
+  performance_score: number
+  recorded_at: string
+}
 
 export default function ProjectPage() {
   const params = useParams()
@@ -18,6 +27,9 @@ export default function ProjectPage() {
   const [newStakeholderRole, setNewStakeholderRole] = useState('')
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [editingScores, setEditingScores] = useState<{[key: string]: {engagement: number, performance: number}}>({})
+  const [selectedStakeholder, setSelectedStakeholder] = useState<Stakeholder | null>(null)
+  const [historyData, setHistoryData] = useState<ScoreHistory[]>([])
+  const [showTrends, setShowTrends] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -34,7 +46,6 @@ export default function ProjectPage() {
     if (stakeholdersRes.ok) {
       const data = await stakeholdersRes.json()
       setStakeholders(data)
-      // Initialize editing scores
       const scores: {[key: string]: {engagement: number, performance: number}} = {}
       data.forEach((s: Stakeholder) => {
         scores[s.id] = { engagement: s.engagement_score, performance: s.performance_score }
@@ -42,6 +53,16 @@ export default function ProjectPage() {
       setEditingScores(scores)
     }
     if (analyticsRes.ok) setAnalytics(await analyticsRes.json())
+  }
+
+  const fetchHistory = async (stakeholder: Stakeholder) => {
+    const res = await fetch(`/api/history?stakeholderId=${stakeholder.id}`)
+    if (res.ok) {
+      const data = await res.json()
+      setHistoryData(data)
+      setSelectedStakeholder(stakeholder)
+      setShowTrends(true)
+    }
   }
 
   const addStakeholder = async (e: React.FormEvent) => {
@@ -90,6 +111,17 @@ export default function ProjectPage() {
       }
     }))
   }
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
+
+  const chartData = historyData.map(h => ({
+    date: formatDate(h.recorded_at),
+    engagement: h.engagement_score,
+    performance: h.performance_score,
+  }))
 
   const projectContext = {
     projectName: project?.name || '',
@@ -188,13 +220,22 @@ export default function ProjectPage() {
                     <h3 className="font-semibold text-white text-lg">{s.name}</h3>
                     <p className="text-sm text-gray-400">{s.role}</p>
                   </div>
-                  <button
-                    onClick={() => updateScores(s.id)}
-                    className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 flex items-center gap-1 text-sm"
-                  >
-                    <Save className="w-4 h-4" />
-                    Save
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => fetchHistory(s)}
+                      className="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600 flex items-center gap-1 text-sm"
+                    >
+                      <TrendingUp className="w-4 h-4" />
+                      Trends
+                    </button>
+                    <button
+                      onClick={() => updateScores(s.id)}
+                      className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 flex items-center gap-1 text-sm"
+                    >
+                      <Save className="w-4 h-4" />
+                      Save
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="space-y-3">
@@ -239,6 +280,73 @@ export default function ProjectPage() {
           )}
         </div>
       </main>
+
+      {/* Trends Modal */}
+      {showTrends && selectedStakeholder && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-xl w-full max-w-2xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-bold text-white">{selectedStakeholder.name}</h2>
+                <p className="text-gray-400">{selectedStakeholder.role} - Score History</p>
+              </div>
+              <button onClick={() => setShowTrends(false)} className="text-gray-400 hover:text-white">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {chartData.length > 1 ? (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <XAxis dataKey="date" stroke="#9ca3af" />
+                    <YAxis domain={[0, 100]} stroke="#9ca3af" />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
+                      labelStyle={{ color: '#fff' }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="engagement" 
+                      stroke="#3b82f6" 
+                      strokeWidth={2}
+                      name="Engagement"
+                      dot={{ fill: '#3b82f6' }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="performance" 
+                      stroke="#22c55e" 
+                      strokeWidth={2}
+                      name="Performance"
+                      dot={{ fill: '#22c55e' }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-64 flex items-center justify-center text-gray-400">
+                <div className="text-center">
+                  <TrendingUp className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>Not enough data yet.</p>
+                  <p className="text-sm">Update scores a few times to see trends.</p>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4 flex gap-4 justify-center text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <span className="text-gray-400">Engagement</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span className="text-gray-400">Performance</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <AIChat
         isOpen={isChatOpen}
