@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2 } from 'lucide-react'
+import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2, Pencil } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import AIChat from '@/components/AIChat'
 import type { Project, Stakeholder, ProjectAnalytics } from '@/lib/types'
@@ -30,6 +30,9 @@ export default function ProjectPage() {
   const [selectedStakeholder, setSelectedStakeholder] = useState<Stakeholder | null>(null)
   const [historyData, setHistoryData] = useState<ScoreHistory[]>([])
   const [showTrends, setShowTrends] = useState(false)
+  const [editingStakeholder, setEditingStakeholder] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editRole, setEditRole] = useState('')
 
   useEffect(() => {
     fetchData()
@@ -109,6 +112,37 @@ export default function ProjectPage() {
       method: 'DELETE',
     })
 
+    fetchData()
+  }
+
+  const startEditing = (s: Stakeholder) => {
+    setEditingStakeholder(s.id)
+    setEditName(s.name)
+    setEditRole(s.role)
+  }
+
+  const cancelEditing = () => {
+    setEditingStakeholder(null)
+    setEditName('')
+    setEditRole('')
+  }
+
+  const saveStakeholderEdit = async (stakeholderId: string) => {
+    if (!editName.trim() || !editRole.trim()) return
+
+    await fetch('/api/stakeholders', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: stakeholderId,
+        name: editName,
+        role: editRole,
+      }),
+    })
+
+    setEditingStakeholder(null)
+    setEditName('')
+    setEditRole('')
     fetchData()
   }
 
@@ -235,32 +269,71 @@ export default function ProjectPage() {
             {stakeholders.map((s) => (
               <div key={s.id} className="border border-gray-700 rounded-lg p-4">
                 <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="font-semibold text-white text-lg">{s.name}</h3>
-                    <p className="text-sm text-gray-400">{s.role}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => fetchHistory(s)}
-                      className="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600 flex items-center gap-1 text-sm"
-                    >
-                      <TrendingUp className="w-4 h-4" />
-                      Trends
-                    </button>
-                    <button
-                      onClick={() => updateScores(s.id)}
-                      className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 flex items-center gap-1 text-sm"
-                    >
-                      <Save className="w-4 h-4" />
-                      Save
-                    </button>
-                    <button
-                      onClick={() => deleteStakeholder(s.id, s.name)}
-                      className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 flex items-center gap-1 text-sm"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                  {editingStakeholder === s.id ? (
+                    <div className="flex gap-2 flex-1 mr-4">
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="flex-1 px-3 py-1 rounded"
+                        placeholder="Name..."
+                      />
+                      <input
+                        type="text"
+                        value={editRole}
+                        onChange={(e) => setEditRole(e.target.value)}
+                        className="flex-1 px-3 py-1 rounded"
+                        placeholder="Role..."
+                      />
+                      <button
+                        onClick={() => saveStakeholderEdit(s.id)}
+                        className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={cancelEditing}
+                        className="bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-500 text-sm"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <h3 className="font-semibold text-white text-lg">{s.name}</h3>
+                      <p className="text-sm text-gray-400">{s.role}</p>
+                    </div>
+                  )}
+                  {editingStakeholder !== s.id && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => startEditing(s)}
+                        className="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600 flex items-center gap-1 text-sm"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => fetchHistory(s)}
+                        className="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600 flex items-center gap-1 text-sm"
+                      >
+                        <TrendingUp className="w-4 h-4" />
+                        Trends
+                      </button>
+                      <button
+                        onClick={() => updateScores(s.id)}
+                        className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 flex items-center gap-1 text-sm"
+                      >
+                        <Save className="w-4 h-4" />
+                        Save
+                      </button>
+                      <button
+                        onClick={() => deleteStakeholder(s.id, s.name)}
+                        className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 flex items-center gap-1 text-sm"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="space-y-3">
