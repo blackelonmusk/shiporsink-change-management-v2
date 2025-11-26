@@ -235,7 +235,9 @@ export default function ProjectPage() {
       role: s.role,
       engagement: editingScores[s.id]?.engagement || s.engagement_score,
       performance: editingScores[s.id]?.performance || s.performance_score,
-      comments: s.comments,
+      comments: s.comments || '',
+      email: (s as any).email || '',
+      phone: (s as any).phone || '',
     })),
   }
 
