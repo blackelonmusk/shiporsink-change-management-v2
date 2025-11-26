@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText } from 'lucide-react'
+import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import AIChat from '@/components/AIChat'
 import type { Project, Stakeholder, ProjectAnalytics } from '@/lib/types'
@@ -97,6 +97,16 @@ export default function ProjectPage() {
         performance_score: scores.performance,
         comments: '',
       }),
+    })
+
+    fetchData()
+  }
+
+  const deleteStakeholder = async (stakeholderId: string, name: string) => {
+    if (!confirm(`Delete ${name}? This cannot be undone.`)) return
+
+    await fetch(`/api/stakeholders?id=${stakeholderId}`, {
+      method: 'DELETE',
     })
 
     fetchData()
@@ -243,6 +253,12 @@ export default function ProjectPage() {
                     >
                       <Save className="w-4 h-4" />
                       Save
+                    </button>
+                    <button
+                      onClick={() => deleteStakeholder(s.id, s.name)}
+                      className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 flex items-center gap-1 text-sm"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
