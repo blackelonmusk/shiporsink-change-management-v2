@@ -8,6 +8,7 @@ import toast from 'react-hot-toast'
 import AIChat from '@/components/AIChat'
 import Header from '@/components/Header'
 import { SkeletonCard, SkeletonStats } from '@/components/Skeleton'
+import AnimatedCounter from '@/components/AnimatedCounter'
 import type { Project, Stakeholder, ProjectAnalytics } from '@/lib/types'
 
 interface ScoreHistory {
@@ -446,12 +447,16 @@ export default function ProjectPage() {
         <div className="grid md:grid-cols-3 gap-6 mb-8">
           <div className="bg-gray-800 p-6 rounded-lg">
             <h3 className="text-lg font-semibold text-gray-300 mb-2">Stakeholders</h3>
-            <p className="text-3xl font-bold text-white">{stakeholders.length}</p>
+            <p className="text-3xl font-bold text-white">
+              <AnimatedCounter value={stakeholders.length} />
+            </p>
           </div>
 
           <div className="bg-gray-800 p-6 rounded-lg">
             <h3 className="text-lg font-semibold text-gray-300 mb-2">Engagement</h3>
-            <p className="text-3xl font-bold text-white">{analytics?.engagementLevel || 0}</p>
+            <p className="text-3xl font-bold text-white">
+              <AnimatedCounter value={analytics?.engagementLevel || 0} />
+            </p>
           </div>
 
           <div className="bg-gray-800 p-6 rounded-lg">
@@ -460,7 +465,9 @@ export default function ProjectPage() {
               (analytics?.riskAssessment || 0) >= 75 ? 'text-red-500' :
               (analytics?.riskAssessment || 0) >= 50 ? 'text-yellow-500' :
               'text-green-500'
-            }`}>{analytics?.riskAssessment || 0}%</p>
+            }`}>
+              <AnimatedCounter value={analytics?.riskAssessment || 0} suffix="%" />
+            </p>
           </div>
         </div>
 
