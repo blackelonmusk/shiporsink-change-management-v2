@@ -9,6 +9,7 @@ import AIChat from '@/components/AIChat'
 import Header from '@/components/Header'
 import { SkeletonCard, SkeletonStats } from '@/components/Skeleton'
 import AnimatedCounter from '@/components/AnimatedCounter'
+import PageTransition from '@/components/PageTransition'
 import type { Project, Stakeholder, ProjectAnalytics } from '@/lib/types'
 
 interface ScoreHistory {
@@ -393,20 +394,21 @@ export default function ProjectPage() {
     <div className="min-h-screen bg-gray-900">
       <Header />
       
-      <div className="max-w-7xl mx-auto px-4 py-4">
-        <button
-          onClick={() => router.push('/dashboard')}
-          className="flex items-center gap-2 text-gray-400 hover:text-white mb-4"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Back to Dashboard
-        </button>
-        <div className="flex items-center justify-between">
-          {editingProjectName ? (
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={projectNameEdit}
+      <PageTransition>
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="flex items-center gap-2 text-gray-400 hover:text-white mb-4"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Back to Dashboard
+          </button>
+          <div className="flex items-center justify-between">
+            {editingProjectName ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={projectNameEdit}
                 onChange={(e) => setProjectNameEdit(e.target.value)}
                 className="text-2xl font-bold px-3 py-1 rounded-lg"
                 autoFocus
@@ -632,6 +634,7 @@ export default function ProjectPage() {
           )}
         </div>
       </main>
+      </PageTransition>
 
       {/* Team Modal */}
       {showTeamModal && (

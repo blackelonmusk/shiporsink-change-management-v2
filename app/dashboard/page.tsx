@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Plus, Pencil, Trash2, X, Users } from 'lucide-react'
 import Header from '@/components/Header'
+import PageTransition from '@/components/PageTransition'
 import type { Project } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
 
@@ -114,29 +115,30 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-900">
       <Header />
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <h2 className="text-3xl font-bold text-white mb-6">Your Projects</h2>
+      <PageTransition>
+        <main className="max-w-7xl mx-auto px-4 py-8">
+          <h2 className="text-3xl font-bold text-white mb-6">Your Projects</h2>
 
-        <form onSubmit={createProject} className="flex gap-2 mb-8">
-          <input
-            type="text"
-            value={newProjectName}
-            onChange={(e) => setNewProjectName(e.target.value)}
-            placeholder="New project name..."
-            className="flex-1 px-4 py-2 rounded-lg"
-          />
-          <button
-            type="submit"
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            Create
-          </button>
-        </form>
+          <form onSubmit={createProject} className="flex gap-2 mb-8">
+            <input
+              type="text"
+              value={newProjectName}
+              onChange={(e) => setNewProjectName(e.target.value)}
+              placeholder="New project name..."
+              className="flex-1 px-4 py-2 rounded-lg"
+            />
+            <button
+              type="submit"
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Create
+            </button>
+          </form>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projects.map((project) => (
-            <div
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {projects.map((project) => (
+              <div
               key={project.id}
               className="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-gray-600 transition-colors"
             >
@@ -214,7 +216,8 @@ export default function Dashboard() {
             </div>
           </>
         )}
-      </main>
+        </main>
+      </PageTransition>
 
       {/* Edit Project Modal */}
       {editingProject && (
