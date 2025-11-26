@@ -1,6 +1,7 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import Footer from '@/components/Footer'
+import ToastProvider from '@/components/ToastProvider'
 
 export const metadata: Metadata = {
   title: 'Ship or Sink - Change Management',
@@ -19,6 +20,7 @@ export default function RootLayout({
           {children}
         </div>
         <Footer />
+        <ToastProvider />
       </body>
     </html>
   )

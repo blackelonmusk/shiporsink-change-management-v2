@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2, Pencil, Mail, Phone, User, MessageCircle, Users, UserPlus } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import toast from 'react-hot-toast'
 import AIChat from '@/components/AIChat'
 import Header from '@/components/Header'
 import type { Project, Stakeholder, ProjectAnalytics } from '@/lib/types'
@@ -137,6 +138,7 @@ export default function ProjectPage() {
       }),
     })
 
+    toast.success('Profile saved!')
     setShowProfile(false)
     fetchData()
   }
@@ -194,6 +196,7 @@ export default function ProjectPage() {
       }),
     })
 
+    toast.success('Team member invited!')
     setInviteEmail('')
     setInviteLoading(false)
     fetchData()
@@ -223,6 +226,7 @@ export default function ProjectPage() {
       }),
     })
 
+    toast.success('Stakeholder added!')
     setNewStakeholderName('')
     setNewStakeholderRole('')
     fetchData()
@@ -242,6 +246,7 @@ export default function ProjectPage() {
       }),
     })
 
+    toast.success('Scores saved!')
     fetchData()
   }
 
@@ -252,6 +257,7 @@ export default function ProjectPage() {
       method: 'DELETE',
     })
 
+    toast.success('Stakeholder deleted')
     fetchData()
   }
 
