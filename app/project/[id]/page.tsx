@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X } from 'lucide-react'
+import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import AIChat from '@/components/AIChat'
 import type { Project, Stakeholder, ProjectAnalytics } from '@/lib/types'
@@ -150,7 +150,16 @@ export default function ProjectPage() {
             <ArrowLeft className="w-5 h-5" />
             Back to Dashboard
           </button>
-          <h1 className="text-3xl font-bold text-white">{project.name}</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold text-white">{project.name}</h1>
+            <button
+              onClick={() => router.push(`/project/${projectId}/report`)}
+              className="flex items-center gap-2 bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
+            >
+              <FileText className="w-5 h-5" />
+              Generate Report
+            </button>
+          </div>
         </div>
       </header>
 
