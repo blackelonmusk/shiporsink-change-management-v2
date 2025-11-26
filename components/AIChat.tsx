@@ -22,6 +22,8 @@ interface AIChatProps {
       engagement: number
       performance: number
       comments: string
+      email?: string
+      phone?: string
     }>
   }
 }
@@ -62,7 +64,9 @@ export default function AIChat({ isOpen, onClose, projectContext }: AIChatProps)
     "What's my biggest risk right now?",
     "How do I improve engagement?",
     "Help me prepare for a stakeholder conversation",
-    "What ADKAR stage are my stakeholders in?"
+    "What ADKAR stage are my stakeholders in?",
+    "Who should I focus on first?",
+    "Draft an email to a resistant stakeholder"
   ]
 
   if (!isOpen) return null
