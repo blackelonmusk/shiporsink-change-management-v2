@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText } from 'lucide-react'
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import AIChat from '@/components/AIChat'
+import { ArrowLeft, Download, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
 import type { Project, Stakeholder, ProjectAnalytics } from '@/lib/types'
 
 interface ScoreHistory {
@@ -15,7 +14,7 @@ interface ScoreHistory {
   recorded_at: string
 }
 
-export default function ProjectPage() {
+export default function ReportPage() {
   const params = useParams()
   const router = useRouter()
   const projectId = params.id as string
@@ -23,93 +22,52 @@ export default function ProjectPage() {
   const [project, setProject] = useState<Project | null>(null)
   const [stakeholders, setStakeholders] = useState<Stakeholder[]>([])
   const [analytics, setAnalytics] = useState<ProjectAnalytics | null>(null)
-  const [newStakeholderName, setNewStakeholderName] = useState('')
-  const [newStakeholderRole, setNewStakeholderRole] = useState('')
-  const [isChatOpen, setIsChatOpen] = useState(false)
-  const [editingScores, setEditingScores] = useState<{[key: string]: {engagement: number, performance: number}}>({})
-  const [selectedStakeholder, setSelectedStakeholder] = useState<Stakeholder | null>(null)
-  const [historyData, setHistoryData] = useState<ScoreHistory[]>([])
-  const [showTrends, setShowTrends] = useState(false)
+  const [allHistory, setAllHistory] = useState<{[key: string]: ScoreHistory[]}>({})
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchData()
+    fetchAllData()
   }, [projectId])
 
-  const fetchData = async () => {
+  const fetchAllData = async () => {
+    setLoading(true)
+    
     const [projectRes, stakeholdersRes, analyticsRes] = await Promise.all([
       fetch(`/api/projects/${projectId}`),
       fetch(`/api/stakeholders?projectId=${projectId}`),
       fetch(`/api/analytics?projectId=${projectId}`),
     ])
 
-    if (projectRes.ok) setProject(await projectRes.json())
+    let projectData = null
+    let stakeholdersData: Stakeholder[] = []
+    
+    if (projectRes.ok) {
+      projectData = await projectRes.json()
+      setProject(projectData)
+    }
     if (stakeholdersRes.ok) {
-      const data = await stakeholdersRes.json()
-      setStakeholders(data)
-      const scores: {[key: string]: {engagement: number, performance: number}} = {}
-      data.forEach((s: Stakeholder) => {
-        scores[s.id] = { engagement: s.engagement_score, performance: s.performance_score }
-      })
-      setEditingScores(scores)
+      stakeholdersData = await stakeholdersRes.json()
+      setStakeholders(stakeholdersData)
     }
     if (analyticsRes.ok) setAnalytics(await analyticsRes.json())
-  }
 
-  const fetchHistory = async (stakeholder: Stakeholder) => {
-    const res = await fetch(`/api/history?stakeholderId=${stakeholder.id}`)
-    if (res.ok) {
-      const data = await res.json()
-      setHistoryData(data)
-      setSelectedStakeholder(stakeholder)
-      setShowTrends(true)
-    }
-  }
-
-  const addStakeholder = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newStakeholderName.trim() || !newStakeholderRole.trim()) return
-
-    await fetch('/api/stakeholders', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        project_id: projectId,
-        name: newStakeholderName,
-        role: newStakeholderRole,
-      }),
+    // Fetch history for all stakeholders
+    const historyPromises = stakeholdersData.map(s => 
+      fetch(`/api/history?stakeholderId=${s.id}`).then(r => r.json())
+    )
+    const histories = await Promise.all(historyPromises)
+    
+    const historyMap: {[key: string]: ScoreHistory[]} = {}
+    stakeholdersData.forEach((s, i) => {
+      historyMap[s.id] = histories[i]
     })
-
-    setNewStakeholderName('')
-    setNewStakeholderRole('')
-    fetchData()
+    setAllHistory(historyMap)
+    
+    setLoading(false)
   }
 
-  const updateScores = async (stakeholderId: string) => {
-    const scores = editingScores[stakeholderId]
-    if (!scores) return
-
-    await fetch('/api/stakeholders', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: stakeholderId,
-        engagement_score: scores.engagement,
-        performance_score: scores.performance,
-        comments: '',
-      }),
-    })
-
-    fetchData()
-  }
-
-  const handleScoreChange = (stakeholderId: string, type: 'engagement' | 'performance', value: number) => {
-    setEditingScores(prev => ({
-      ...prev,
-      [stakeholderId]: {
-        ...prev[stakeholderId],
-        [type]: value
-      }
-    }))
+  const handlePrint = () => {
+    window.print()
   }
 
   const formatDate = (dateString: string) => {
@@ -117,251 +75,245 @@ export default function ProjectPage() {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
-  const chartData = historyData.map(h => ({
-    date: formatDate(h.recorded_at),
-    engagement: h.engagement_score,
-    performance: h.performance_score,
-  }))
-
-  const projectContext = {
-    projectName: project?.name || '',
-    status: project?.status || '',
-    riskLevel: analytics?.riskAssessment || 0,
-    totalEngagement: analytics?.engagementLevel || 0,
-    stakeholders: stakeholders.map(s => ({
-      name: s.name,
-      role: s.role,
-      engagement: editingScores[s.id]?.engagement || s.engagement_score,
-      performance: editingScores[s.id]?.performance || s.performance_score,
-      comments: s.comments,
-    })),
+  const getChangeReadinessScore = () => {
+    if (stakeholders.length === 0) return 0
+    const avgEngagement = stakeholders.reduce((sum, s) => sum + s.engagement_score, 0) / stakeholders.length
+    const avgPerformance = stakeholders.reduce((sum, s) => sum + s.performance_score, 0) / stakeholders.length
+    return Math.round((avgEngagement + avgPerformance) / 2)
   }
 
-  if (!project) return <div className="p-8 text-white">Loading...</div>
+  const getADKARStage = (score: number) => {
+    if (score < 20) return { stage: 'Awareness', color: 'text-red-400' }
+    if (score < 40) return { stage: 'Desire', color: 'text-orange-400' }
+    if (score < 60) return { stage: 'Knowledge', color: 'text-yellow-400' }
+    if (score < 80) return { stage: 'Ability', color: 'text-blue-400' }
+    return { stage: 'Reinforcement', color: 'text-green-400' }
+  }
+
+  const getTrend = (stakeholderId: string) => {
+    const history = allHistory[stakeholderId] || []
+    if (history.length < 2) return 'neutral'
+    const latest = history[history.length - 1].engagement_score
+    const previous = history[history.length - 2].engagement_score
+    if (latest > previous) return 'up'
+    if (latest < previous) return 'down'
+    return 'neutral'
+  }
+
+  const stakeholderChartData = stakeholders.map(s => ({
+    name: s.name.split(' ')[0],
+    engagement: s.engagement_score,
+    performance: s.performance_score,
+  }))
+
+  const readinessScore = getChangeReadinessScore()
+  const reportDate = new Date().toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  })
+
+  if (loading) return <div className="p-8 text-white">Loading report...</div>
+  if (!project) return <div className="p-8 text-white">Project not found</div>
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      <header className="bg-gray-800 border-b border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+    <div className="min-h-screen bg-white">
+      {/* Print-hidden controls */}
+      <div className="print:hidden bg-gray-900 border-b border-gray-700 sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <button
-            onClick={() => router.push('/dashboard')}
-            className="flex items-center gap-2 text-gray-400 hover:text-white mb-4"
+            onClick={() => router.push(`/project/${projectId}`)}
+            className="flex items-center gap-2 text-gray-400 hover:text-white"
           >
             <ArrowLeft className="w-5 h-5" />
-            Back to Dashboard
+            Back to Project
           </button>
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold text-white">{project.name}</h1>
-            <button
-              onClick={() => router.push(`/project/${projectId}/report`)}
-              className="flex items-center gap-2 bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
-            >
-              <FileText className="w-5 h-5" />
-              Generate Report
-            </button>
-          </div>
+          <button
+            onClick={handlePrint}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            <Download className="w-5 h-5" />
+            Download PDF
+          </button>
         </div>
-      </header>
+      </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-gray-800 p-6 rounded-lg">
-            <h3 className="text-lg font-semibold text-gray-300 mb-2">Stakeholders</h3>
-            <p className="text-3xl font-bold text-white">{stakeholders.length}</p>
-          </div>
-
-          <div className="bg-gray-800 p-6 rounded-lg">
-            <h3 className="text-lg font-semibold text-gray-300 mb-2">Engagement</h3>
-            <p className="text-3xl font-bold text-white">{analytics?.engagementLevel || 0}</p>
-          </div>
-
-          <div className="bg-gray-800 p-6 rounded-lg">
-            <h3 className="text-lg font-semibold text-gray-300 mb-2">Risk Level</h3>
-            <p className={`text-3xl font-bold ${
-              (analytics?.riskAssessment || 0) >= 75 ? 'text-red-500' :
-              (analytics?.riskAssessment || 0) >= 50 ? 'text-yellow-500' :
-              'text-green-500'
-            }`}>{analytics?.riskAssessment || 0}%</p>
-          </div>
-        </div>
-
-        <div className="bg-gray-800 p-6 rounded-lg">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-white">Stakeholders</h2>
-            <button
-              onClick={() => setIsChatOpen(true)}
-              className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
-            >
-              <Sparkles className="w-5 h-5" />
-              Ask AI Coach
-            </button>
-          </div>
-
-          <form onSubmit={addStakeholder} className="flex gap-2 mb-6">
-            <input
-              type="text"
-              value={newStakeholderName}
-              onChange={(e) => setNewStakeholderName(e.target.value)}
-              placeholder="Name..."
-              className="flex-1 px-4 py-2 rounded-lg"
-            />
-            <input
-              type="text"
-              value={newStakeholderRole}
-              onChange={(e) => setNewStakeholderRole(e.target.value)}
-              placeholder="Role..."
-              className="flex-1 px-4 py-2 rounded-lg"
-            />
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              Add
-            </button>
-          </form>
-
-          <div className="space-y-4">
-            {stakeholders.map((s) => (
-              <div key={s.id} className="border border-gray-700 rounded-lg p-4">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="font-semibold text-white text-lg">{s.name}</h3>
-                    <p className="text-sm text-gray-400">{s.role}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => fetchHistory(s)}
-                      className="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600 flex items-center gap-1 text-sm"
-                    >
-                      <TrendingUp className="w-4 h-4" />
-                      Trends
-                    </button>
-                    <button
-                      onClick={() => updateScores(s.id)}
-                      className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 flex items-center gap-1 text-sm"
-                    >
-                      <Save className="w-4 h-4" />
-                      Save
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="space-y-3">
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-400">Engagement</span>
-                      <span className="text-white font-medium">{editingScores[s.id]?.engagement || 0}/100</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={editingScores[s.id]?.engagement || 0}
-                      onChange={(e) => handleScoreChange(s.id, 'engagement', parseInt(e.target.value))}
-                      className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                    />
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-400">Performance</span>
-                      <span className="text-white font-medium">{editingScores[s.id]?.performance || 0}/100</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={editingScores[s.id]?.performance || 0}
-                      onChange={(e) => handleScoreChange(s.id, 'performance', parseInt(e.target.value))}
-                      className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-green-500"
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {stakeholders.length === 0 && (
-            <p className="text-center text-gray-500 py-8">
-              No stakeholders yet. Add your first one above!
-            </p>
-          )}
-        </div>
-      </main>
-
-      {/* Trends Modal */}
-      {showTrends && selectedStakeholder && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-xl w-full max-w-2xl p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-xl font-bold text-white">{selectedStakeholder.name}</h2>
-                <p className="text-gray-400">{selectedStakeholder.role} - Score History</p>
-              </div>
-              <button onClick={() => setShowTrends(false)} className="text-gray-400 hover:text-white">
-                <X className="w-6 h-6" />
-              </button>
+      {/* Report Content */}
+      <div className="max-w-4xl mx-auto px-8 py-12 text-gray-900">
+        {/* Header */}
+        <div className="border-b-2 border-blue-600 pb-6 mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-xl">⛵</span>
             </div>
+            <span className="text-blue-600 font-semibold">Ship or Sink</span>
+          </div>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            Change Readiness Report
+          </h1>
+          <h2 className="text-2xl text-gray-600">{project.name}</h2>
+          <p className="text-gray-500 mt-2">Generated on {reportDate}</p>
+        </div>
 
-            {chartData.length > 1 ? (
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData}>
-                    <XAxis dataKey="date" stroke="#9ca3af" />
-                    <YAxis domain={[0, 100]} stroke="#9ca3af" />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
-                      labelStyle={{ color: '#fff' }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="engagement" 
-                      stroke="#3b82f6" 
-                      strokeWidth={2}
-                      name="Engagement"
-                      dot={{ fill: '#3b82f6' }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="performance" 
-                      stroke="#22c55e" 
-                      strokeWidth={2}
-                      name="Performance"
-                      dot={{ fill: '#22c55e' }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+        {/* Executive Summary */}
+        <section className="mb-10">
+          <h3 className="text-xl font-bold text-gray-900 mb-4 border-l-4 border-blue-600 pl-3">
+            Executive Summary
+          </h3>
+          <div className="grid grid-cols-3 gap-6">
+            <div className="bg-gray-50 rounded-lg p-6 text-center">
+              <p className="text-gray-500 text-sm mb-2">Change Readiness Score</p>
+              <p className={`text-5xl font-bold ${
+                readinessScore >= 60 ? 'text-green-600' :
+                readinessScore >= 40 ? 'text-yellow-600' :
+                'text-red-600'
+              }`}>{readinessScore}%</p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-6 text-center">
+              <p className="text-gray-500 text-sm mb-2">Risk Level</p>
+              <p className={`text-5xl font-bold ${
+                (analytics?.riskAssessment || 0) >= 75 ? 'text-red-600' :
+                (analytics?.riskAssessment || 0) >= 50 ? 'text-yellow-600' :
+                'text-green-600'
+              }`}>{analytics?.riskAssessment || 0}%</p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-6 text-center">
+              <p className="text-gray-500 text-sm mb-2">Stakeholders Tracked</p>
+              <p className="text-5xl font-bold text-blue-600">{stakeholders.length}</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Stakeholder Overview Chart */}
+        {stakeholders.length > 0 && (
+          <section className="mb-10">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 border-l-4 border-blue-600 pl-3">
+              Stakeholder Engagement Overview
+            </h3>
+            <div className="h-64 bg-gray-50 rounded-lg p-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stakeholderChartData}>
+                  <XAxis dataKey="name" stroke="#374151" />
+                  <YAxis domain={[0, 100]} stroke="#374151" />
+                  <Tooltip />
+                  <Bar dataKey="engagement" fill="#3b82f6" name="Engagement" />
+                  <Bar dataKey="performance" fill="#22c55e" name="Performance" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-2 flex gap-6 justify-center text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                <span className="text-gray-600">Engagement</span>
               </div>
-            ) : (
-              <div className="h-64 flex items-center justify-center text-gray-400">
-                <div className="text-center">
-                  <TrendingUp className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Not enough data yet.</p>
-                  <p className="text-sm">Update scores a few times to see trends.</p>
-                </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-500 rounded"></div>
+                <span className="text-gray-600">Performance</span>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Stakeholder Details */}
+        <section className="mb-10">
+          <h3 className="text-xl font-bold text-gray-900 mb-4 border-l-4 border-blue-600 pl-3">
+            Stakeholder Analysis
+          </h3>
+          <table className="w-full">
+            <thead>
+              <tr className="border-b-2 border-gray-200">
+                <th className="text-left py-3 text-gray-600 font-semibold">Name</th>
+                <th className="text-left py-3 text-gray-600 font-semibold">Role</th>
+                <th className="text-center py-3 text-gray-600 font-semibold">Engagement</th>
+                <th className="text-center py-3 text-gray-600 font-semibold">Performance</th>
+                <th className="text-center py-3 text-gray-600 font-semibold">ADKAR Stage</th>
+                <th className="text-center py-3 text-gray-600 font-semibold">Trend</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stakeholders.map(s => {
+                const adkar = getADKARStage(s.engagement_score)
+                const trend = getTrend(s.id)
+                return (
+                  <tr key={s.id} className="border-b border-gray-100">
+                    <td className="py-3 font-medium">{s.name}</td>
+                    <td className="py-3 text-gray-600">{s.role}</td>
+                    <td className="py-3 text-center">
+                      <span className={`font-semibold ${
+                        s.engagement_score >= 60 ? 'text-green-600' :
+                        s.engagement_score >= 40 ? 'text-yellow-600' :
+                        'text-red-600'
+                      }`}>{s.engagement_score}%</span>
+                    </td>
+                    <td className="py-3 text-center">
+                      <span className={`font-semibold ${
+                        s.performance_score >= 60 ? 'text-green-600' :
+                        s.performance_score >= 40 ? 'text-yellow-600' :
+                        'text-red-600'
+                      }`}>{s.performance_score}%</span>
+                    </td>
+                    <td className={`py-3 text-center font-medium ${adkar.color}`}>
+                      {adkar.stage}
+                    </td>
+                    <td className="py-3 text-center">
+                      {trend === 'up' && <TrendingUp className="w-5 h-5 text-green-600 mx-auto" />}
+                      {trend === 'down' && <TrendingDown className="w-5 h-5 text-red-600 mx-auto" />}
+                      {trend === 'neutral' && <Minus className="w-5 h-5 text-gray-400 mx-auto" />}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </section>
+
+        {/* Recommendations */}
+        <section className="mb-10">
+          <h3 className="text-xl font-bold text-gray-900 mb-4 border-l-4 border-blue-600 pl-3">
+            Key Recommendations
+          </h3>
+          <div className="bg-blue-50 rounded-lg p-6 space-y-3">
+            {stakeholders.filter(s => s.engagement_score < 40).length > 0 && (
+              <div className="flex gap-3">
+                <span className="text-red-600 font-bold">!</span>
+                <p><strong>Critical:</strong> {stakeholders.filter(s => s.engagement_score < 40).length} stakeholder(s) have engagement below 40%. Prioritize direct conversations to understand their resistance.</p>
               </div>
             )}
-
-            <div className="mt-4 flex gap-4 justify-center text-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <span className="text-gray-400">Engagement</span>
+            {readinessScore < 50 && (
+              <div className="flex gap-3">
+                <span className="text-yellow-600 font-bold">⚠</span>
+                <p><strong>Warning:</strong> Overall change readiness is low ({readinessScore}%). Consider slowing the pace of change until stakeholder buy-in improves.</p>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-gray-400">Performance</span>
+            )}
+            {stakeholders.some(s => getADKARStage(s.engagement_score).stage === 'Awareness') && (
+              <div className="flex gap-3">
+                <span className="text-blue-600 font-bold">ℹ</span>
+                <p><strong>Focus Area:</strong> Some stakeholders are still at the Awareness stage. Increase communication about why this change is necessary.</p>
               </div>
-            </div>
+            )}
+            {readinessScore >= 60 && (
+              <div className="flex gap-3">
+                <span className="text-green-600 font-bold">✓</span>
+                <p><strong>Positive:</strong> Change readiness is trending well. Continue current engagement strategies and prepare for the Knowledge and Ability stages.</p>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        </section>
 
-      <AIChat
-        isOpen={isChatOpen}
-        onClose={() => setIsChatOpen(false)}
-        projectContext={projectContext}
-      />
+        {/* Footer */}
+        <footer className="border-t border-gray-200 pt-6 text-center text-gray-500 text-sm">
+          <p>Generated by Ship or Sink Change Management Assistant</p>
+          <p>shiporsink.ai</p>
+        </footer>
+      </div>
+
+      {/* Print Styles */}
+      <style jsx global>{`
+        @media print {
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .print\\:hidden { display: none !important; }
+        }
+      `}</style>
     </div>
   )
 }
