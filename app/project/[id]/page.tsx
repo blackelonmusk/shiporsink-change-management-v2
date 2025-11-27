@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2, Pencil, Mail, Phone, User, MessageCircle, Users, UserPlus } from 'lucide-react'
+import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2, Pencil, Mail, Phone, User, MessageCircle, Users, UserPlus, Image, Upload } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import toast from 'react-hot-toast'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import AIChat from '@/components/AIChat'
 import Header from '@/components/Header'
 import { SkeletonCard, SkeletonStats } from '@/components/Skeleton'
@@ -76,6 +77,8 @@ export default function ProjectPage() {
   const params = useParams()
   const router = useRouter()
   const projectId = params.id as string
+  const supabase = createClientComponentClient()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [project, setProject] = useState<Project | null>(null)
   const [stakeholders, setStakeholders] = useState<Stakeholder[]>([])
@@ -93,6 +96,7 @@ export default function ProjectPage() {
   const [editRole, setEditRole] = useState('')
   const [editingProjectName, setEditingProjectName] = useState(false)
   const [projectNameEdit, setProjectNameEdit] = useState('')
+  const [uploadingLogo, setUploadingLogo] = useState(false)
   
   // Stakeholder profile modal state
   const [showProfile, setShowProfile] = useState(false)
@@ -322,6 +326,68 @@ export default function ProjectPage() {
     fetchData()
   }
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file')
+      return
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Image must be less than 2MB')
+      return
+    }
+
+    setUploadingLogo(true)
+
+    try {
+      // Upload to Supabase Storage
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${projectId}-${Date.now()}.${fileExt}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('logos')
+        .upload(fileName, file)
+
+      if (uploadError) throw uploadError
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('logos')
+        .getPublicUrl(fileName)
+
+      // Update project with logo URL
+      await fetch(`/api/projects/${projectId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logo_url: publicUrl }),
+      })
+
+      toast.success('Logo uploaded!')
+      fetchData()
+    } catch (error) {
+      toast.error('Failed to upload logo')
+      console.error(error)
+    }
+
+    setUploadingLogo(false)
+  }
+
+  const removeLogo = async () => {
+    await fetch(`/api/projects/${projectId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ logo_url: null }),
+    })
+
+    toast.success('Logo removed')
+    fetchData()
+  }
+
   const handleScoreChange = (stakeholderId: string, type: 'engagement' | 'performance', value: number) => {
     setEditingScores(prev => ({
       ...prev,
@@ -438,6 +504,37 @@ export default function ProjectPage() {
             </div>
           )}
           <div className="flex gap-2">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleLogoUpload}
+              accept="image/*"
+              className="hidden"
+            />
+            {(project as any).logo_url ? (
+              <div className="flex items-center gap-2">
+                <img 
+                  src={(project as any).logo_url} 
+                  alt="Logo" 
+                  className="w-10 h-10 object-contain rounded"
+                />
+                <button
+                  onClick={removeLogo}
+                  className="text-gray-400 hover:text-red-500 text-sm"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingLogo}
+                className="flex items-center gap-2 bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-600 disabled:opacity-50"
+              >
+                <Image className="w-5 h-5" />
+                {uploadingLogo ? 'Uploading...' : 'Add Logo'}
+              </button>
+            )}
             <button
               onClick={() => setShowTeamModal(true)}
               className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"

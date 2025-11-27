@@ -184,10 +184,22 @@ export default function ReportPage() {
       {/* Cover Page */}
       <div className="h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white print:h-auto print:py-24">
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur rounded-2xl mb-8">
-            <Ship className="w-12 h-12 text-white" />
-          </div>
-          <p className="text-blue-300 text-lg mb-4 tracking-widest uppercase">Ship or Sink</p>
+          {(project as any).logo_url ? (
+            <div className="mb-8">
+              <img 
+                src={(project as any).logo_url} 
+                alt="Company Logo" 
+                className="h-24 max-w-64 object-contain mx-auto"
+              />
+            </div>
+          ) : (
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur rounded-2xl mb-8">
+              <Ship className="w-12 h-12 text-white" />
+            </div>
+          )}
+          {!(project as any).logo_url && (
+            <p className="text-blue-300 text-lg mb-4 tracking-widest uppercase">Ship or Sink</p>
+          )}
           <h1 className="text-5xl md:text-6xl font-bold mb-6">
             Change Readiness<br />Report
           </h1>
