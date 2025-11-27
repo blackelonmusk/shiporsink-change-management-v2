@@ -11,36 +11,28 @@ export async function GET(request: Request) {
 
   const { data: stakeholders, error } = await supabase
     .from('stakeholders')
-    .select('*')
+    .select('engagement_score')
     .eq('project_id', projectId)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  if (!stakeholders || stakeholders.length === 0) {
-    return NextResponse.json({
-      engagementLevel: 0,
-      riskAssessment: 0,
-      stakeholderBreakdown: []
-    })
-  }
-
-  const avgEngagement = Math.round(
-    stakeholders.reduce((sum, s) => sum + s.engagement_score, 0) / stakeholders.length
+  const totalEngagement = stakeholders.reduce(
+    (sum, s) => sum + s.engagement_score,
+    0
   )
 
-  const riskAssessment = Math.round(100 - avgEngagement)
-
-  const stakeholderBreakdown = stakeholders.map(s => ({
-    name: s.name,
-    engagement: s.engagement_score,
-    performance: s.performance_score
-  }))
+  // Calculate risk based on engagement
+  let riskAssessment = 0
+  if (totalEngagement < 50) riskAssessment = 100
+  else if (totalEngagement < 100) riskAssessment = 75
+  else if (totalEngagement < 150) riskAssessment = 50
+  else riskAssessment = 25
 
   return NextResponse.json({
-    engagementLevel: avgEngagement,
     riskAssessment,
-    stakeholderBreakdown
+    engagementLevel: totalEngagement,
+    trajectoryTrend: [totalEngagement],
   })
 }
