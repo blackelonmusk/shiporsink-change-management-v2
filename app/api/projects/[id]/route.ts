@@ -23,12 +23,13 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   const body = await request.json()
-  const { name, description, status } = body
+  const { name, description, status, logo_url } = body
 
   const updateData: any = {}
   if (name !== undefined) updateData.name = name
   if (description !== undefined) updateData.description = description
   if (status !== undefined) updateData.status = status
+  if (logo_url !== undefined) updateData.logo_url = logo_url
 
   const { data, error } = await supabase
     .from('projects')
