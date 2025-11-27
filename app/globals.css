@@ -2,22 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 15, 23, 42;
-  --background-end-rgb: 15, 23, 42;
+/* Light mode styles */
+html.light body {
+  @apply bg-gray-100 text-gray-900;
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-start-rgb));
+html.light .bg-gray-900 {
+  @apply bg-gray-100;
 }
 
-input, textarea {
-  color: #000 !important;
-  background-color: #fff !important;
+html.light .bg-gray-800 {
+  @apply bg-white;
 }
 
-input::placeholder, textarea::placeholder {
-  color: #666 !important;
+html.light .bg-gray-700 {
+  @apply bg-gray-200;
+}
+
+html.light .text-white {
+  @apply text-gray-900;
+}
+
+html.light .text-gray-400 {
+  @apply text-gray-600;
+}
+
+html.light .text-gray-300 {
+  @apply text-gray-700;
+}
+
+html.light .border-gray-700 {
+  @apply border-gray-200;
+}
+
+html.light .border-gray-600 {
+  @apply border-gray-300;
+}
+
+html.light input,
+html.light textarea,
+html.light select {
+  @apply bg-gray-100 text-gray-900 border border-gray-300;
+}
+
+html.light input::placeholder,
+html.light textarea::placeholder {
+  @apply text-gray-500;
+}
+
+/* Smooth transitions for theme switching */
+body,
+header,
+main,
+div,
+input,
+textarea,
+select,
+button {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
