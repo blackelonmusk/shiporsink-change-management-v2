@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2, Pencil, Mail, Phone, User, MessageCircle, Users, UserPlus, Image, Upload } from 'lucide-react'
+import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2, Pencil, Mail, Phone, User as UserIcon, MessageCircle, Users, UserPlus, Image, Upload } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import toast from 'react-hot-toast'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
@@ -833,7 +833,7 @@ export default function ProjectPage() {
           <div className="bg-gray-800 rounded-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <User className="w-6 h-6 text-blue-400" />
+                <UserIcon className="w-6 h-6 text-blue-400" />
                 Stakeholder Profile
               </h2>
               <button onClick={() => setShowProfile(false)} className="text-gray-400 hover:text-white">
