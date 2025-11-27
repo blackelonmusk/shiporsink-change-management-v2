@@ -2,7 +2,6 @@ import './globals.css'
 import type { Metadata } from 'next'
 import Footer from '@/components/Footer'
 import ToastProvider from '@/components/ToastProvider'
-import { ThemeProvider } from '@/components/ThemeProvider'
 
 export const metadata: Metadata = {
   title: 'Ship or Sink - Change Management',
@@ -15,15 +14,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <body className="min-h-screen flex flex-col bg-gray-900">
-        <ThemeProvider>
-          <div className="flex-1">
-            {children}
-          </div>
-          <Footer />
-          <ToastProvider />
-        </ThemeProvider>
+        <div className="flex-1">
+          {children}
+        </div>
+        <Footer />
+        <ToastProvider />
       </body>
     </html>
   )

@@ -3,15 +3,13 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { Ship, LogOut, Sun, Moon } from 'lucide-react'
-import { useTheme } from '@/components/ThemeProvider'
+import { Ship, LogOut } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 
 export default function Header() {
   const router = useRouter()
   const supabase = createClientComponentClient()
   const [user, setUser] = useState<User | null>(null)
-  const { theme, toggleTheme } = useTheme()
 
   useEffect(() => {
     const getUser = async () => {
@@ -40,19 +38,12 @@ export default function Header() {
         </div>
         {user && (
           <div className="flex items-center gap-4">
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-lg bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors"
-              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
             <span className="text-gray-400 text-sm">
               {user.email}
             </span>
             <button
               onClick={handleSignOut}
-              className="text-gray-400 hover:text-white flex items-center gap-2 transition-colors"
+              className="text-gray-400 hover:text-white flex items-center gap-2"
             >
               <LogOut className="w-5 h-5" />
               Sign Out
