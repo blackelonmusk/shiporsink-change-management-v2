@@ -12,7 +12,6 @@ import { SkeletonCard, SkeletonStats } from '@/components/Skeleton'
 import AnimatedCounter from '@/components/AnimatedCounter'
 import PageTransition from '@/components/PageTransition'
 import type { Project, Stakeholder, ProjectAnalytics } from '@/lib/types'
-import type { User } from '@supabase/supabase-js'
 
 interface ScoreHistory {
   id: string
@@ -85,7 +84,6 @@ export default function ProjectPage() {
   const [stakeholders, setStakeholders] = useState<Stakeholder[]>([])
   const [analytics, setAnalytics] = useState<ProjectAnalytics | null>(null)
   const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState<User | null>(null)
   const [newStakeholderName, setNewStakeholderName] = useState('')
   const [newStakeholderRole, setNewStakeholderRole] = useState('')
   const [isChatOpen, setIsChatOpen] = useState(false)
@@ -123,11 +121,6 @@ export default function ProjectPage() {
   const [inviteLoading, setInviteLoading] = useState(false)
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
-    }
-    getUser()
     fetchData()
   }, [projectId])
 
@@ -241,7 +234,6 @@ export default function ProjectPage() {
     if (!inviteEmail.trim()) return
     setInviteLoading(true)
 
-    // Add to database
     await fetch('/api/team', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -251,23 +243,7 @@ export default function ProjectPage() {
       }),
     })
 
-    // Send email notification
-    try {
-      await fetch('/api/send-invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: inviteEmail.toLowerCase().trim(),
-          inviterName: user?.email?.split('@')[0] || 'A team member',
-          projectName: project?.name || 'Change Management Project',
-          projectUrl: `${window.location.origin}/project/${projectId}`,
-        }),
-      })
-      toast.success('Invite sent! Email notification delivered.')
-    } catch (error) {
-      toast.success('Team member invited!')
-    }
-
+    toast.success('Team member invited!')
     setInviteEmail('')
     setInviteLoading(false)
     fetchData()
