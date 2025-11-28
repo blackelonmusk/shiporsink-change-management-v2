@@ -18,6 +18,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { templateCategory, projectName, startDate } = body
 
+    console.log('Template request:', { templateCategory, projectName, startDate })
+
     if (!templateCategory || !projectName) {
       return NextResponse.json(
         { error: 'Missing required fields' },
@@ -32,7 +34,12 @@ export async function POST(request: NextRequest) {
       .eq('category', templateCategory)
       .single()
 
-    if (templateError) throw templateError
+    if (templateError) {
+      console.error('Template fetch error:', templateError)
+      throw templateError
+    }
+
+    console.log('Template found:', template.name)
 
     // Create project
     const { data: project, error: projectError } = await supabase
@@ -46,72 +53,109 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
-    if (projectError) throw projectError
+    if (projectError) {
+      console.error('Project creation error:', projectError)
+      throw projectError
+    }
 
-    // Fetch and create stakeholders
+    console.log('Project created:', project.id)
+
+    // Fetch template stakeholders
     const { data: templateStakeholders, error: stakeholdersError } = await supabase
       .from('template_stakeholders')
       .select('*')
       .eq('template_id', template.id)
 
-    if (stakeholdersError) throw stakeholdersError
+    if (stakeholdersError) {
+      console.error('Template stakeholders fetch error:', stakeholdersError)
+      throw stakeholdersError
+    }
 
-    const stakeholdersToInsert = templateStakeholders.map((ts: any) => ({
-      project_id: project.id,
-      name: ts.name,
-      role: ts.role,
-      stakeholder_type: ts.stakeholder_type,
-      engagement_score: 0,
-      performance_score: 0,
-      notes: ts.notes
-    }))
+    console.log('Template stakeholders found:', templateStakeholders?.length || 0)
 
-    const { error: insertStakeholdersError } = await supabase
-      .from('stakeholders')
-      .insert(stakeholdersToInsert)
+    // Create stakeholders
+    if (templateStakeholders && templateStakeholders.length > 0) {
+      const stakeholdersToInsert = templateStakeholders.map((ts: any) => ({
+        project_id: project.id,
+        name: ts.name,
+        role: ts.role,
+        stakeholder_type: ts.stakeholder_type,
+        engagement_score: 0,
+        performance_score: 0,
+        notes: ts.notes
+      }))
 
-    if (insertStakeholdersError) throw insertStakeholdersError
+      console.log('Inserting stakeholders:', stakeholdersToInsert.length)
 
-    // Fetch and create milestones
+      const { error: insertStakeholdersError } = await supabase
+        .from('stakeholders')
+        .insert(stakeholdersToInsert)
+
+      if (insertStakeholdersError) {
+        console.error('Stakeholders insert error:', insertStakeholdersError)
+        throw insertStakeholdersError
+      }
+
+      console.log('Stakeholders inserted successfully')
+    }
+
+    // Fetch template milestones
     const { data: templateMilestones, error: milestonesError } = await supabase
       .from('template_milestones')
       .select('*')
       .eq('template_id', template.id)
 
-    if (milestonesError) throw milestonesError
+    if (milestonesError) {
+      console.error('Template milestones fetch error:', milestonesError)
+      throw milestonesError
+    }
 
-    // Calculate milestone dates based on start date
-    const projectStartDate = startDate ? new Date(startDate) : new Date()
-    
-    const milestonesToInsert = templateMilestones.map((tm: any) => {
-      const milestoneDate = new Date(projectStartDate)
-      milestoneDate.setDate(milestoneDate.getDate() + tm.days_from_start)
+    console.log('Template milestones found:', templateMilestones?.length || 0)
+
+    // Create milestones
+    if (templateMilestones && templateMilestones.length > 0) {
+      const projectStartDate = startDate ? new Date(startDate) : new Date()
       
-      return {
-        project_id: project.id,
-        name: tm.name,
-        description: tm.description,
-        date: milestoneDate.toISOString().split('T')[0], // YYYY-MM-DD format
-        type: tm.type,
-        status: 'upcoming'
+      const milestonesToInsert = templateMilestones.map((tm: any) => {
+        const milestoneDate = new Date(projectStartDate)
+        milestoneDate.setDate(milestoneDate.getDate() + tm.days_from_start)
+        
+        return {
+          project_id: project.id,
+          name: tm.name,
+          description: tm.description,
+          date: milestoneDate.toISOString().split('T')[0],
+          type: tm.type,
+          status: 'upcoming'
+        }
+      })
+
+      console.log('Inserting milestones:', milestonesToInsert.length)
+
+      const { error: insertMilestonesError } = await supabase
+        .from('milestones')
+        .insert(milestonesToInsert)
+
+      if (insertMilestonesError) {
+        console.error('Milestones insert error:', insertMilestonesError)
+        throw insertMilestonesError
       }
-    })
 
-    const { error: insertMilestonesError } = await supabase
-      .from('milestones')
-      .insert(milestonesToInsert)
+      console.log('Milestones inserted successfully')
+    }
 
-    if (insertMilestonesError) throw insertMilestonesError
-
-    return NextResponse.json({ 
+    return NextResponse.json({
       project,
-      message: 'Project created successfully from template' 
+      message: 'Project created successfully from template'
     }, { status: 201 })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating project from template:', error)
     return NextResponse.json(
-      { error: 'Failed to create project from template' },
+      { 
+        error: 'Failed to create project from template',
+        details: error.message || 'Unknown error'
+      },
       { status: 500 }
     )
   }
