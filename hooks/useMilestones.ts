@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/components/ToastProvider';
+import toast from 'react-hot-toast';
 
 interface Milestone {
   id: string;
@@ -27,7 +27,7 @@ interface UpdateMilestoneInput extends Partial<CreateMilestoneInput> {
 
 export function useMilestones(projectId: string) {
   const queryClient = useQueryClient();
-  const { showToast } = useToast();
+  
 
   // Fetch milestones
   const {
@@ -64,10 +64,10 @@ export function useMilestones(projectId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['milestones', projectId] });
-      showToast('Milestone created successfully', 'success');
+      toast.success('Milestone created successfully');
     },
     onError: (error) => {
-      showToast('Failed to create milestone', 'error');
+      toast.error('Failed to create milestone');
       console.error('Create milestone error:', error);
     },
   });
@@ -89,10 +89,10 @@ export function useMilestones(projectId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['milestones', projectId] });
-      showToast('Milestone updated successfully', 'success');
+      toast.success('Milestone updated successfully');
     },
     onError: (error) => {
-      showToast('Failed to update milestone', 'error');
+      toast.error('Failed to update milestone');
       console.error('Update milestone error:', error);
     },
   });
@@ -115,10 +115,10 @@ export function useMilestones(projectId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['milestones', projectId] });
-      showToast('Milestone deleted successfully', 'success');
+      toast.success('Milestone deleted successfully');
     },
     onError: (error) => {
-      showToast('Failed to delete milestone', 'error');
+      toast.error('Failed to delete milestone');
       console.error('Delete milestone error:', error);
     },
   });
