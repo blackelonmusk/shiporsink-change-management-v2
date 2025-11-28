@@ -17,7 +17,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className="min-h-screen flex flex-col bg-gray-900 overflow-x-hidden w-full">
+      <body className="min-h-screen flex flex-col bg-gray-900">
         <QueryProvider>
           <ThemeProvider>
             <div className="flex-1">
