@@ -19,21 +19,21 @@ export default function Home() {
         
         <div className="grid md:grid-cols-3 gap-6 mb-12 max-w-4xl mx-auto">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <h3 className="font-semibold mb-2 text-gray-900 dark:text-white">Stakeholder Tracking</h3>
+            <h3 className="font-semibold mb-2">Stakeholder Tracking</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Rate and manage stakeholder engagement
             </p>
           </div>
           
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <h3 className="font-semibold mb-2 text-gray-900 dark:text-white">Risk Analytics</h3>
+            <h3 className="font-semibold mb-2">Risk Analytics</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Real-time project health assessment
             </p>
           </div>
           
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <h3 className="font-semibold mb-2 text-gray-900 dark:text-white">AI Coaching</h3>
+            <h3 className="font-semibold mb-2">AI Coaching</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               ADKAR-based conversation guidance
             </p>
@@ -47,7 +47,7 @@ export default function Home() {
           Get Started
         </Link>
         
-        <p className="mt-8 text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-8 text-sm text-gray-500">
           Part of the <a href="https://shiporsink.ai" className="text-blue-600 hover:underline">Ship or Sink</a> challenge
         </p>
       </div>
