@@ -483,7 +483,7 @@ export default function ProjectPage() {
 
   if (loading || !project) {
     return (
-      <div className="min-h-screen bg-gray-900 overflow-x-hidden">
+      <div className="min-h-screen bg-gray-900">
         <Header />
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="h-8 bg-gray-700 rounded w-48 mb-8 animate-pulse" />
@@ -502,7 +502,7 @@ export default function ProjectPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 overflow-x-hidden">
+    <div className="min-h-screen bg-gray-900">
       <Header />
 
       <PageTransition>
