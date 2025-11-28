@@ -10,7 +10,7 @@ interface Milestone {
   name: string
   date: string
   type: string
-  status: string
+  status: 'upcoming' | 'completed' | 'in_progress'
   description?: string
 }
 
@@ -20,7 +20,7 @@ interface MilestoneTimelineProps {
   onAdd: () => void
   onEdit: (milestone: Milestone) => void
   onDelete: (milestoneId: string) => void
-  onUpdateStatus: (milestoneId: string, status: string) => void
+  onUpdateStatus: (milestoneId: string, status: 'upcoming' | 'completed' | 'in_progress') => void
 }
 
 const MILESTONE_ICONS: Record<string, string> = {
