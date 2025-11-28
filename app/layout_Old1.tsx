@@ -3,7 +3,6 @@ import type { Metadata } from 'next'
 import Footer from '@/components/Footer'
 import ToastProvider from '@/components/ToastProvider'
 import { ThemeProvider } from '@/components/ThemeProvider'
-import QueryProvider from '@/components/QueryProvider'
 
 export const metadata: Metadata = {
   title: 'Ship or Sink - Change Management',
@@ -18,15 +17,13 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="min-h-screen flex flex-col bg-gray-900">
-        <QueryProvider>
-          <ThemeProvider>
-            <div className="flex-1">
-              {children}
-            </div>
-            <Footer />
-            <ToastProvider />
-          </ThemeProvider>
-        </QueryProvider>
+        <ThemeProvider>
+          <div className="flex-1">
+            {children}
+          </div>
+          <Footer />
+          <ToastProvider />
+        </ThemeProvider>
       </body>
     </html>
   )
