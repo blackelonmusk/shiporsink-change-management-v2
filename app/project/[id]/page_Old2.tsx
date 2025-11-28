@@ -12,7 +12,6 @@ import MilestoneSection from '@/components/MilestoneSection'
 import { SkeletonCard, SkeletonStats } from '@/components/Skeleton'
 import AnimatedCounter from '@/components/AnimatedCounter'
 import PageTransition from '@/components/PageTransition'
-import { useMilestones } from '@/hooks/useMilestones'
 import type { Project, Stakeholder, ProjectAnalytics } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
 
@@ -80,7 +79,6 @@ export default function ProjectPage() {
   const params = useParams()
   const router = useRouter()
   const projectId = params.id as string
-  const { milestones } = useMilestones(projectId)
   const supabase = createClientComponentClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -460,14 +458,6 @@ export default function ProjectPage() {
       email: (s as any).email || '',
       phone: (s as any).phone || '',
       stakeholder_type: (s as any).stakeholder_type || '',
-      notes: (s as any).notes || '',
-    })),
-    milestones: (milestones || []).map(m => ({
-      name: m.name,
-      date: m.date,
-      type: m.type,
-      status: m.status,
-      description: m.description || '',
     })),
   }
 
