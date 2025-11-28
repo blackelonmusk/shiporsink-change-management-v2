@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // GET all milestones for a project
 export async function GET(
   request: NextRequest,
-  { params }: { params: { projectId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     const supabase = createRouteHandlerClient({ cookies });
@@ -22,7 +22,7 @@ export async function GET(
     const { data: project } = await supabase
       .from('projects')
       .select('id')
-      .eq('id', params.projectId)
+      .eq('id', params.id)
       .eq('user_id', session.user.id)
       .single();
 
@@ -34,7 +34,7 @@ export async function GET(
     const { data: milestones, error } = await supabase
       .from('milestones')
       .select('*')
-      .eq('project_id', params.projectId)
+      .eq('project_id', params.id)
       .order('date', { ascending: true });
 
     if (error) throw error;
@@ -52,7 +52,7 @@ export async function GET(
 // POST create a new milestone
 export async function POST(
   request: NextRequest,
-  { params }: { params: { projectId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     const supabase = createRouteHandlerClient({ cookies });
@@ -69,7 +69,7 @@ export async function POST(
     const { data: project } = await supabase
       .from('projects')
       .select('id')
-      .eq('id', params.projectId)
+      .eq('id', params.id)
       .eq('user_id', session.user.id)
       .single();
 
@@ -92,7 +92,7 @@ export async function POST(
     const { data: milestone, error } = await supabase
       .from('milestones')
       .insert({
-        project_id: params.projectId,
+        project_id: params.id,
         name,
         date,
         type,
@@ -117,7 +117,7 @@ export async function POST(
 // PATCH update a milestone
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { projectId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     const supabase = createRouteHandlerClient({ cookies });
@@ -188,7 +188,7 @@ export async function PATCH(
 // DELETE a milestone
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { projectId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     const supabase = createRouteHandlerClient({ cookies });
