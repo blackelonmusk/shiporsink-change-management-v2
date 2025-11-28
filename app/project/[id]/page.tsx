@@ -78,13 +78,10 @@ const getBorderColor = (type: string) => {
 
 const getScoreGradient = (score: number) => {
   if (score < 33) {
-    // Red to Orange (0-33)
     return 'from-red-600 via-red-500 to-orange-500'
   } else if (score < 66) {
-    // Orange to Yellow (33-66)
     return 'from-orange-500 via-yellow-500 to-yellow-400'
   } else {
-    // Yellow to Green (66-100)
     return 'from-yellow-400 via-green-500 to-green-400'
   }
 }
@@ -658,7 +655,7 @@ export default function ProjectPage() {
               />
               <button
                 type="submit"
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-all hover:scale-105"
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
               >
                 <Plus className="w-5 h-5" />
               Add
@@ -666,104 +663,71 @@ export default function ProjectPage() {
             </form>
 
             <div className="space-y-4">
-              {stakeholders.map((s, index) => (
-                <div 
-                  key={s.id} 
-                  className={`
-                    bg-gray-800 border-2 ${getBorderColor((s as any).stakeholder_type)} 
-                    rounded-xl p-6 transition-all duration-300
-                    hover:shadow-2xl hover:shadow-${getBorderColor((s as any).stakeholder_type).replace('border-', '')}/20
-                    hover:-translate-y-1
-                  `}
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
+              {stakeholders.map((s) => (
+                <div key={s.id} className={`bg-gray-800 border-2 ${getBorderColor((s as any).stakeholder_type)} rounded-xl p-6 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1`}>
                   <div className="flex justify-between items-start mb-4">
                     <div
-                      className="cursor-pointer hover:bg-gray-700/50 rounded-lg p-2 -m-2 flex items-center gap-3 transition-all group"
+                      className="cursor-pointer hover:bg-gray-700 rounded p-1 -m-1 flex items-center gap-3"
                       onClick={() => openProfile(s)}
                     >
-                      <div className={`
-                        w-14 h-14 rounded-full bg-gradient-to-br ${getAvatarColor(s.name)} 
-                        flex items-center justify-center text-white font-bold text-xl
-                        ring-2 ring-offset-2 ring-offset-gray-800 ring-transparent
-                        group-hover:ring-${getBorderColor((s as any).stakeholder_type).replace('border-', '')}
-                        transition-all duration-300 shadow-lg
-                      `}>
+                      <div className={`w-12 h-12 rounded-full ${getAvatarColor(s.name)} flex items-center justify-center text-white font-bold text-lg`}>
                         {getInitials(s.name)}
                       </div>
                       <div>
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-bold text-white text-lg group-hover:text-blue-400 transition-colors">
-                            {s.name}
-                          </h3>
+                          <h3 className="font-semibold text-white text-lg">{s.name}</h3>
                           {getTypeBadge((s as any).stakeholder_type)}
                         </div>
-                        <p className="text-sm text-gray-400 font-medium">{s.role}</p>
+                        <p className="text-sm text-gray-400">{s.role}</p>
                         {((s as any).email || (s as any).phone) && (
-                          <div className="flex gap-3 mt-2 text-xs text-gray-500">
-                            {(s as any).email && (
-                              <span className="flex items-center gap-1 hover:text-gray-400 transition-colors">
-                                <Mail className="w-3 h-3" /> {(s as any).email}
-                              </span>
-                            )}
-                            {(s as any).phone && (
-                              <span className="flex items-center gap-1 hover:text-gray-400 transition-colors">
-                                <Phone className="w-3 h-3" /> {(s as any).phone}
-                              </span>
-                            )}
+                          <div className="flex gap-3 mt-1 text-xs text-gray-500">
+                            {(s as any).email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {(s as any).email}</span>}
+                            {(s as any).phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {(s as any).phone}</span>}
                           </div>
                         )}
                       </div>
                     </div>
-                    <div className="flex gap-2 flex-wrap justify-end">
+                    <div className="flex gap-2">
                       <button
                         onClick={() => getConversationStarters(s)}
-                        className="bg-purple-600 text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 flex items-center gap-1 text-sm font-medium transition-all hover:scale-105 shadow-lg hover:shadow-purple-500/50"
+                        className="bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700 flex items-center gap-1 text-sm"
                         title="Get conversation starters"
                       >
                         <MessageCircle className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => fetchHistory(s)}
-                        className="bg-gray-700 text-white px-3 py-1.5 rounded-lg hover:bg-gray-600 flex items-center gap-1 text-sm font-medium transition-all hover:scale-105"
+                        className="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600 flex items-center gap-1 text-sm"
                       >
                         <TrendingUp className="w-4 h-4" />
-                        Trends
-                      </button>
+                      Trends
+                    </button>
                       <button
                         onClick={() => updateScores(s.id)}
-                        className="bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 flex items-center gap-1 text-sm font-medium transition-all hover:scale-105 shadow-lg hover:shadow-green-500/50"
+                        className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 flex items-center gap-1 text-sm"
                       >
                         <Save className="w-4 h-4" />
-                        Save
-                      </button>
+                      Save
+                    </button>
                       <button
                         onClick={() => deleteStakeholder(s.id, s.name)}
-                        className="bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 flex items-center gap-1 text-sm font-medium transition-all hover:scale-105"
+                        className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 flex items-center gap-1 text-sm"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    {/* Engagement Score */}
+                  <div className="space-y-3">
                     <div>
-                      <div className="flex justify-between text-sm mb-2">
-                        <span className="text-gray-400 font-medium">Engagement</span>
-                        <span className="text-white font-bold bg-gray-700 px-2 py-0.5 rounded">
-                          {editingScores[s.id]?.engagement || 0}
-                          <span className="text-gray-400">/100</span>
-                        </span>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-400">Engagement</span>
+                        <span className="text-white font-medium">{editingScores[s.id]?.engagement || 0}/100</span>
                       </div>
                       <div className="relative">
-                        <div className="h-4 bg-gray-700 rounded-full overflow-hidden mb-1 shadow-inner">
+                        <div className="h-3 bg-gray-700 rounded-full overflow-hidden mb-1">
                           <div
-                            className={`
-                              h-full bg-gradient-to-r ${getScoreGradient(editingScores[s.id]?.engagement || 0)} 
-                              rounded-full transition-all duration-500 ease-out
-                              shadow-lg
-                            `}
+                            className={`h-full bg-gradient-to-r ${getScoreGradient(editingScores[s.id]?.engagement || 0)} rounded-full transition-all duration-500 ease-out shadow-lg`}
                             style={{ width: `${editingScores[s.id]?.engagement || 0}%` }}
                           />
                         </div>
@@ -773,28 +737,20 @@ export default function ProjectPage() {
                           max="100"
                           value={editingScores[s.id]?.engagement || 0}
                           onChange={(e) => handleScoreChange(s.id, 'engagement', parseInt(e.target.value))}
-                          className="w-full h-4 bg-transparent rounded-lg appearance-none cursor-pointer absolute top-0 opacity-0 hover:opacity-10 transition-opacity"
+                          className="w-full h-2 bg-transparent rounded-lg appearance-none cursor-pointer absolute top-0 opacity-0"
                         />
                       </div>
                     </div>
 
-                    {/* Performance Score */}
                     <div>
-                      <div className="flex justify-between text-sm mb-2">
-                        <span className="text-gray-400 font-medium">Performance</span>
-                        <span className="text-white font-bold bg-gray-700 px-2 py-0.5 rounded">
-                          {editingScores[s.id]?.performance || 0}
-                          <span className="text-gray-400">/100</span>
-                        </span>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-400">Performance</span>
+                        <span className="text-white font-medium">{editingScores[s.id]?.performance || 0}/100</span>
                       </div>
                       <div className="relative">
-                        <div className="h-4 bg-gray-700 rounded-full overflow-hidden mb-1 shadow-inner">
+                        <div className="h-3 bg-gray-700 rounded-full overflow-hidden mb-1">
                           <div
-                            className={`
-                              h-full bg-gradient-to-r ${getScoreGradient(editingScores[s.id]?.performance || 0)} 
-                              rounded-full transition-all duration-500 ease-out
-                              shadow-lg
-                            `}
+                            className={`h-full bg-gradient-to-r ${getScoreGradient(editingScores[s.id]?.performance || 0)} rounded-full transition-all duration-500 ease-out shadow-lg`}
                             style={{ width: `${editingScores[s.id]?.performance || 0}%` }}
                           />
                         </div>
@@ -804,7 +760,7 @@ export default function ProjectPage() {
                           max="100"
                           value={editingScores[s.id]?.performance || 0}
                           onChange={(e) => handleScoreChange(s.id, 'performance', parseInt(e.target.value))}
-                          className="w-full h-4 bg-transparent rounded-lg appearance-none cursor-pointer absolute top-0 opacity-0 hover:opacity-10 transition-opacity"
+                          className="w-full h-2 bg-transparent rounded-lg appearance-none cursor-pointer absolute top-0 opacity-0"
                         />
                       </div>
                     </div>
@@ -812,6 +768,18 @@ export default function ProjectPage() {
                 </div>
               ))}
             </div>
+
+            {stakeholders.length === 0 && (
+              <p className="text-center text-gray-500 py-8">
+                No stakeholders yet. Add your first one above!
+              </p>
+            )}
+          </div>
+          {/* ADD THIS LINE */}
+          <MilestoneSection projectId={projectId} />
+        </main>
+      </PageTransition>
+
       {/* Team Modal */}
       {showTeamModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
