@@ -3,10 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { Plus, Pencil, Trash2, X, Users, Sparkles } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Users } from 'lucide-react'
 import Header from '@/components/Header'
 import PageTransition from '@/components/PageTransition'
-import CreateFromTemplateModal from '@/components/CreateFromTemplateModal'
 import type { Project } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
 
@@ -22,7 +21,6 @@ export default function Dashboard() {
   const [editingProject, setEditingProject] = useState<Project | null>(null)
   const [editName, setEditName] = useState('')
   const [editDescription, setEditDescription] = useState('')
-  const [showTemplateModal, setShowTemplateModal] = useState(false)
 
   useEffect(() => {
     checkUser()
@@ -121,34 +119,22 @@ export default function Dashboard() {
         <main className="max-w-7xl mx-auto px-4 py-8">
           <h2 className="text-3xl font-bold text-white mb-6">Your Projects</h2>
 
-          <div className="flex flex-col sm:flex-row gap-3 mb-8">
-            {/* Create Blank Project */}
-            <form onSubmit={createProject} className="flex gap-2 flex-1">
-              <input
-                type="text"
-                value={newProjectName}
-                onChange={(e) => setNewProjectName(e.target.value)}
-                placeholder="New project name..."
-                className="flex-1 px-4 py-2 rounded-lg"
-              />
-              <button
-                type="submit"
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 whitespace-nowrap"
-              >
-                <Plus className="w-5 h-5" />
-                Create
-              </button>
-            </form>
-
-            {/* Create from Template */}
+          <form onSubmit={createProject} className="flex gap-2 mb-8">
+            <input
+              type="text"
+              value={newProjectName}
+              onChange={(e) => setNewProjectName(e.target.value)}
+              placeholder="New project name..."
+              className="flex-1 px-4 py-2 rounded-lg"
+            />
             <button
-              onClick={() => setShowTemplateModal(true)}
-              className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 flex items-center gap-2 justify-center whitespace-nowrap"
+              type="submit"
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
             >
-              <Sparkles className="w-5 h-5" />
-              Create from Template
+              <Plus className="w-5 h-5" />
+              Create
             </button>
-          </div>
+          </form>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects.map((project) => (
@@ -283,12 +269,6 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-
-      {/* Create from Template Modal */}
-      <CreateFromTemplateModal
-        isOpen={showTemplateModal}
-        onClose={() => setShowTemplateModal(false)}
-      />
     </div>
   )
 }
