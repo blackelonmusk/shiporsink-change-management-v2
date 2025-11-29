@@ -13,7 +13,7 @@ export default function Home() {
           Ship or Sink
         </h1>
         
-        <p className="text-3xl md:text-4xl font-bold mb-8 bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 bg-clip-text text-transparent animate-pulse-gentle drop-shadow-lg">
+        <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
           AI-Powered Change Management Assistant
         </p>
         
