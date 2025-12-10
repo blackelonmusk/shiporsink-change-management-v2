@@ -20,20 +20,12 @@ export default function Home() {
               </div>
               <span className="text-xl font-bold">Ship or Sink</span>
             </div>
-            <div className="flex items-center gap-4">
-              <Link
-                href="/auth"
-                className="text-zinc-400 hover:text-white transition-colors font-medium"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/dashboard"
-                className="px-6 py-2 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-black font-semibold hover:from-orange-600 hover:to-orange-700 transition-all hover:scale-105"
-              >
-                Get Started
-              </Link>
-            </div>
+            <Link
+              href="/dashboard"
+              className="px-6 py-2 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-black font-semibold hover:from-orange-600 hover:to-orange-700 transition-all hover:scale-105"
+            >
+              Get Started
+            </Link>
           </div>
         </header>
 
@@ -86,7 +78,7 @@ export default function Home() {
 
             {/* Social Proof */}
             <p className="text-sm text-zinc-500 mt-8">
-              PMP, Prosci, SAFe SPC certified • $5k certification knowledge, free.
+              Built by <a href="https://linkedin.com/in/therealbrandonmann" className="text-orange-400 hover:underline">Brandon Mann</a> • PMP, Prosci, SAFe SPC • $5k certification knowledge, free.
             </p>
           </div>
         </section>
@@ -236,6 +228,17 @@ export default function Home() {
             </Link>
           </div>
         </section>
+
+        {/* Footer */}
+        <footer className="border-t border-zinc-800 py-8">
+          <div className="container mx-auto px-4 text-center text-zinc-500 text-sm">
+            <p>
+              Part of the <a href="https://shiporsink.ai" className="text-orange-400 hover:underline">Ship or Sink Business Suite</a> • 
+              Built by <a href="https://linkedin.com/in/therealbrandonmann" className="text-orange-400 hover:underline">Brandon Mann</a> • 
+              <a href="https://github.com/therealbrandonmann/shiporsink-change-management" className="text-orange-400 hover:underline ml-1">Source Code</a>
+            </p>
+          </div>
+        </footer>
       </div>
     </main>
   )
