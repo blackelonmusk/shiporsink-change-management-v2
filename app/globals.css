@@ -495,3 +495,198 @@ a:hover {
   }
 }
 
+/* Ship or Sink Change Management - Updated Theme */
+
+/* Orange Accent Variables (Change Management) */
+:root {
+  --change-orange: #f97316;
+  --change-orange-light: #fb923c;
+  --change-orange-dark: #ea580c;
+  --change-orange-muted: rgba(249, 115, 22, 0.2);
+}
+
+/* Update existing button styles to use orange */
+.btn-primary {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: #000;
+  font-weight: 600;
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #ea580c, #c2410c);
+  transform: scale(1.05);
+  box-shadow: 0 10px 40px rgba(249, 115, 22, 0.3);
+}
+
+.btn-purple {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+}
+
+.btn-purple:hover {
+  background: linear-gradient(135deg, #ea580c, #c2410c);
+  box-shadow: 0 10px 40px rgba(249, 115, 22, 0.3);
+}
+
+/* Update focus states to orange */
+*:focus-visible {
+  outline: 2px solid #f97316;
+  outline-offset: 2px;
+}
+
+/* Toast notifications - orange theme */
+.Toaster__toast--success {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%) !important;
+}
+
+/* AI Chat badge - orange */
+.ai-badge {
+  background: rgba(249, 115, 22, 0.2);
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  color: #fb923c;
+}
+
+/* Milestone timeline - orange accents */
+.milestone-icon.completed {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+}
+
+.milestone-today-ring {
+  border-color: #f97316;
+  animation: pulse-orange 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-orange {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.7);
+  }
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 0 0 10px rgba(249, 115, 22, 0);
+  }
+}
+
+/* Progress bars - keep existing gradient system */
+/* The red->yellow->green gradient is intentional for stakeholder scores */
+
+/* Card hover effects - orange glow */
+.card-hover:hover {
+  border-color: rgba(249, 115, 22, 0.5);
+  box-shadow: 0 10px 40px rgba(249, 115, 22, 0.1);
+}
+
+/* Links - orange */
+a {
+  color: #fb923c;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: #f97316;
+}
+
+/* Badge styles - orange */
+.badge-orange {
+  background: rgba(249, 115, 22, 0.2);
+  color: #fb923c;
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Pulsing animation for AI icon */
+@keyframes pulse-glow-orange {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(249, 115, 22, 0.8);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow-orange 3s ease-in-out infinite;
+}
+
+/* Grid background - orange tint */
+.bg-grid-orange {
+  background-image: 
+    linear-gradient(rgba(249, 115, 22, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(249, 115, 22, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+/* Gradient hero overlay */
+.gradient-hero-orange {
+  background: linear-gradient(135deg, 
+    rgba(249, 115, 22, 0.15) 0%, 
+    transparent 50%, 
+    rgba(234, 88, 12, 0.1) 100%
+  );
+}
+
+/* Selection color */
+::selection {
+  background: rgba(249, 115, 22, 0.3);
+  color: #ffffff;
+}
+
+/* Scrollbar - orange */
+::-webkit-scrollbar-thumb {
+  background: #f97316;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #ea580c;
+}
+
+/* Confetti particles - add orange to mix */
+.confetti-orange {
+  background: #f97316 !important;
+}
+
+/* Status badges - update active to orange */
+.status-badge.active {
+  background: rgba(249, 115, 22, 0.2);
+  color: #fb923c;
+  border-color: rgba(249, 115, 22, 0.3);
+}
+
+/* Template cards - orange hover */
+.template-card:hover {
+  border-color: rgba(249, 115, 22, 0.5);
+  background: rgba(249, 115, 22, 0.05);
+}
+
+/* Dashboard stats - orange accent */
+.stat-card {
+  border: 1px solid #27272a;
+  transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+  border-color: rgba(249, 115, 22, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Mobile responsiveness - ensure no horizontal scroll */
+@media (max-width: 640px) {
+  body {
+    overflow-x: hidden;
+    width: 100%;
+  }
+
+  .container {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+}
