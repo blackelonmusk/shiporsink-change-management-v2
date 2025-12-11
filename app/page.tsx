@@ -49,11 +49,11 @@ export default function Home() {
             {/* Main Headline */}
             <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
               <span className="bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
-                Prosci taught the framework.
+                Change Management.
               </span>
               <br />
               <span className="bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">
-                This tells you what to say.
+                Finally.
               </span>
             </h1>
 
