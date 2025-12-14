@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2, Pencil, Mail, Phone, User as UserIcon, MessageCircle, Users, UserPlus, Image, Upload } from 'lucide-react'
+import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2, Pencil, Mail, Phone, User as UserIcon, MessageCircle, Users, UserPlus, Image, Upload, Briefcase } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import toast from 'react-hot-toast'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
@@ -10,6 +10,7 @@ import AIChat from '@/components/AIChat'
 import Header from '@/components/Header'
 import MilestoneSection from '@/components/MilestoneSection'
 import ADKARScores from '@/components/ADKARScores'
+import MeetingPrepModal from '@/components/MeetingPrepModal'
 import { SkeletonCard, SkeletonStats } from '@/components/Skeleton'
 import AnimatedCounter from '@/components/AnimatedCounter'
 import PageTransition from '@/components/PageTransition'
@@ -140,6 +141,9 @@ export default function ProjectPage() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteLoading, setInviteLoading] = useState(false)
 
+  // Meeting Prep state
+  const [meetingPrepStakeholder, setMeetingPrepStakeholder] = useState<any>(null)
+
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -199,6 +203,21 @@ export default function ProjectPage() {
     setProfileComments(s.comments || '')
     setProfileType((s as any).stakeholder_type || '')
     setShowProfile(true)
+  }
+
+  const openMeetingPrep = (s: Stakeholder) => {
+    const scores = editingScores[s.id]
+    setMeetingPrepStakeholder({
+      ...s,
+      email: (s as any).email,
+      phone: (s as any).phone,
+      stakeholder_type: (s as any).stakeholder_type,
+      awareness_score: scores?.awareness_score ?? 50,
+      desire_score: scores?.desire_score ?? 50,
+      knowledge_score: scores?.knowledge_score ?? 50,
+      ability_score: scores?.ability_score ?? 50,
+      reinforcement_score: scores?.reinforcement_score ?? 50,
+    })
   }
 
   const saveProfile = async () => {
@@ -735,6 +754,14 @@ export default function ProjectPage() {
                     </div>
                     <div className="flex gap-2 flex-wrap">
                       <button
+                        onClick={() => openMeetingPrep(s)}
+                        className="bg-purple-500/10 text-purple-400 border border-purple-500/30 px-3 py-1.5 rounded-lg hover:bg-purple-500/20 flex items-center gap-1.5 text-sm font-medium transition-colors"
+                        title="Meeting Prep"
+                      >
+                        <Briefcase className="w-4 h-4" />
+                        Prep
+                      </button>
+                      <button
                         onClick={() => getConversationStarters(s)}
                         className="bg-orange-500/10 text-orange-400 border border-orange-500/30 px-3 py-1.5 rounded-lg hover:bg-orange-500/20 flex items-center gap-1 text-sm font-medium transition-colors"
                         title="Get conversation starters"
@@ -1127,6 +1154,15 @@ export default function ProjectPage() {
           </div>
         </div>
       )}
+
+      {/* Meeting Prep Modal */}
+      <MeetingPrepModal
+        isOpen={!!meetingPrepStakeholder}
+        onClose={() => setMeetingPrepStakeholder(null)}
+        stakeholder={meetingPrepStakeholder || {}}
+        projectName={project?.name || ''}
+        projectStatus={project?.status || ''}
+      />
 
       <AIChat
         isOpen={isChatOpen}
