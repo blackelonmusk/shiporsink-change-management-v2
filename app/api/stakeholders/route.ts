@@ -38,6 +38,12 @@ export async function POST(request: Request) {
         comments: '',
         email: '',
         phone: '',
+        // ADKAR scores - default to 50 (neutral starting point)
+        awareness_score: 50,
+        desire_score: 50,
+        knowledge_score: 50,
+        ability_score: 50,
+        reinforcement_score: 50,
       },
     ])
     .select()
@@ -60,9 +66,26 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   const body = await request.json()
-  const { id, engagement_score, performance_score, comments, name, role, email, phone } = body
+  const { 
+    id, 
+    engagement_score, 
+    performance_score, 
+    comments, 
+    name, 
+    role, 
+    email, 
+    phone,
+    // ADKAR scores
+    awareness_score,
+    desire_score,
+    knowledge_score,
+    ability_score,
+    reinforcement_score,
+  } = body
 
   const updateData: any = {}
+  
+  // Basic fields
   if (engagement_score !== undefined) updateData.engagement_score = engagement_score
   if (performance_score !== undefined) updateData.performance_score = performance_score
   if (comments !== undefined) updateData.comments = comments
@@ -71,6 +94,13 @@ export async function PATCH(request: Request) {
   if (email !== undefined) updateData.email = email
   if (phone !== undefined) updateData.phone = phone
   if (body.stakeholder_type !== undefined) updateData.stakeholder_type = body.stakeholder_type
+  
+  // ADKAR scores
+  if (awareness_score !== undefined) updateData.awareness_score = awareness_score
+  if (desire_score !== undefined) updateData.desire_score = desire_score
+  if (knowledge_score !== undefined) updateData.knowledge_score = knowledge_score
+  if (ability_score !== undefined) updateData.ability_score = ability_score
+  if (reinforcement_score !== undefined) updateData.reinforcement_score = reinforcement_score
 
   const { data, error } = await supabase
     .from('stakeholders')

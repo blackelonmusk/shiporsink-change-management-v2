@@ -9,6 +9,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import AIChat from '@/components/AIChat'
 import Header from '@/components/Header'
 import MilestoneSection from '@/components/MilestoneSection'
+import ADKARScores from '@/components/ADKARScores'
 import { SkeletonCard, SkeletonStats } from '@/components/Skeleton'
 import AnimatedCounter from '@/components/AnimatedCounter'
 import PageTransition from '@/components/PageTransition'
@@ -28,6 +29,16 @@ interface TeamMember {
   id: string
   invited_email: string
   created_at: string
+}
+
+interface StakeholderScores {
+  engagement: number
+  performance: number
+  awareness_score: number
+  desire_score: number
+  knowledge_score: number
+  ability_score: number
+  reinforcement_score: number
 }
 
 const STAKEHOLDER_TYPES = [
@@ -96,7 +107,7 @@ export default function ProjectPage() {
   const [newStakeholderName, setNewStakeholderName] = useState('')
   const [newStakeholderRole, setNewStakeholderRole] = useState('')
   const [isChatOpen, setIsChatOpen] = useState(false)
-  const [editingScores, setEditingScores] = useState<{ [key: string]: { engagement: number, performance: number } }>({})
+  const [editingScores, setEditingScores] = useState<{ [key: string]: StakeholderScores }>({})
   const [selectedStakeholder, setSelectedStakeholder] = useState<Stakeholder | null>(null)
   const [historyData, setHistoryData] = useState<ScoreHistory[]>([])
   const [showTrends, setShowTrends] = useState(false)
@@ -150,9 +161,17 @@ export default function ProjectPage() {
     if (stakeholdersRes.ok) {
       const data = await stakeholdersRes.json()
       setStakeholders(data)
-      const scores: { [key: string]: { engagement: number, performance: number } } = {}
-      data.forEach((s: Stakeholder) => {
-        scores[s.id] = { engagement: s.engagement_score, performance: s.performance_score }
+      const scores: { [key: string]: StakeholderScores } = {}
+      data.forEach((s: any) => {
+        scores[s.id] = { 
+          engagement: s.engagement_score, 
+          performance: s.performance_score,
+          awareness_score: s.awareness_score ?? 50,
+          desire_score: s.desire_score ?? 50,
+          knowledge_score: s.knowledge_score ?? 50,
+          ability_score: s.ability_score ?? 50,
+          reinforcement_score: s.reinforcement_score ?? 50,
+        }
       })
       setEditingScores(scores)
     }
@@ -211,13 +230,14 @@ export default function ProjectPage() {
     setConversationStarters('')
 
     const typeLabel = STAKEHOLDER_TYPES.find(t => t.value === (s as any).stakeholder_type)?.label || 'Unknown'
+    const scores = editingScores[s.id]
 
     try {
       const response = await fetch('https://shiporsink-ai-api.vercel.app/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          question: `Give me 5 specific conversation starters for ${s.name} (${s.role}, ${typeLabel} type). Their engagement is ${s.engagement_score}/100 and performance is ${s.performance_score}/100. Notes about them: ${s.comments || 'No notes yet'}. Format as a numbered list with the exact phrases I should say in quotes, followed by a brief explanation of why each works.`,
+          question: `Give me 5 specific conversation starters for ${s.name} (${s.role}, ${typeLabel} type). Their engagement is ${s.engagement_score}/100 and performance is ${s.performance_score}/100. ADKAR scores: Awareness ${scores?.awareness_score || 50}, Desire ${scores?.desire_score || 50}, Knowledge ${scores?.knowledge_score || 50}, Ability ${scores?.ability_score || 50}, Reinforcement ${scores?.reinforcement_score || 50}. Notes about them: ${s.comments || 'No notes yet'}. Format as a numbered list with the exact phrases I should say in quotes, followed by a brief explanation of why each works.`,
           projectContext: {
             projectName: project?.name || '',
             status: project?.status || '',
@@ -326,6 +346,27 @@ export default function ProjectPage() {
     fetchData()
   }
 
+  const updateADKARScores = async (stakeholderId: string) => {
+    const scores = editingScores[stakeholderId]
+    if (!scores) return
+
+    await fetch('/api/stakeholders', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: stakeholderId,
+        awareness_score: scores.awareness_score,
+        desire_score: scores.desire_score,
+        knowledge_score: scores.knowledge_score,
+        ability_score: scores.ability_score,
+        reinforcement_score: scores.reinforcement_score,
+      }),
+    })
+
+    toast.success('ADKAR scores saved!')
+    fetchData()
+  }
+
   const deleteStakeholder = async (stakeholderId: string, name: string) => {
     if (!confirm(`Delete ${name}? This cannot be undone.`)) return
 
@@ -418,6 +459,16 @@ export default function ProjectPage() {
       [stakeholderId]: {
         ...prev[stakeholderId],
         [type]: value
+      }
+    }))
+  }
+
+  const handleADKARScoreChange = (stakeholderId: string, field: string, value: number) => {
+    setEditingScores(prev => ({
+      ...prev,
+      [stakeholderId]: {
+        ...prev[stakeholderId],
+        [field]: value
       }
     }))
   }
@@ -657,7 +708,7 @@ export default function ProjectPage() {
               {stakeholders.map((s, index) => (
                 <div 
                   key={s.id} 
-                  className={`bg-zinc-950 border-2 ${getBorderColor((s as any).stakeholder_type)} rounded-xl p-5 transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5 animate-fadeIn`}
+                  className={`bg-zinc-950 border-2 ${getBorderColor((s as any).stakeholder_type)} rounded-xl p-5 transition-all duration-200 hover:shadow-xl animate-fadeIn`}
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
@@ -761,6 +812,19 @@ export default function ProjectPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* ADKAR Scores Component */}
+                  <ADKARScores
+                    stakeholderId={s.id}
+                    stakeholderName={s.name}
+                    awareness={editingScores[s.id]?.awareness_score ?? 50}
+                    desire={editingScores[s.id]?.desire_score ?? 50}
+                    knowledge={editingScores[s.id]?.knowledge_score ?? 50}
+                    ability={editingScores[s.id]?.ability_score ?? 50}
+                    reinforcement={editingScores[s.id]?.reinforcement_score ?? 50}
+                    onScoreChange={(field, value) => handleADKARScoreChange(s.id, field, value)}
+                    onSave={() => updateADKARScores(s.id)}
+                  />
                 </div>
               ))}
             </div>
