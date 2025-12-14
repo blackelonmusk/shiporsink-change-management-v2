@@ -31,22 +31,22 @@ interface TeamMember {
 }
 
 const STAKEHOLDER_TYPES = [
-  { value: 'champion', label: 'Champion', color: 'bg-green-500', description: 'Actively promotes change' },
-  { value: 'early_adopter', label: 'Early Adopter', color: 'bg-blue-500', description: 'Quick to embrace new things' },
-  { value: 'neutral', label: 'Neutral', color: 'bg-gray-500', description: 'Waits to see how things go' },
-  { value: 'skeptic', label: 'Skeptic', color: 'bg-yellow-500', description: 'Questions everything, needs proof' },
-  { value: 'resistant', label: 'Resistant', color: 'bg-red-500', description: 'Actively pushes back' },
+  { value: 'champion', label: 'Champion', color: 'bg-emerald-500', borderColor: 'border-emerald-500/50', bgMuted: 'bg-emerald-500/10', textColor: 'text-emerald-400', description: 'Actively promotes change' },
+  { value: 'early_adopter', label: 'Early Adopter', color: 'bg-cyan-500', borderColor: 'border-cyan-500/50', bgMuted: 'bg-cyan-500/10', textColor: 'text-cyan-400', description: 'Quick to embrace new things' },
+  { value: 'neutral', label: 'Neutral', color: 'bg-zinc-500', borderColor: 'border-zinc-500/50', bgMuted: 'bg-zinc-500/10', textColor: 'text-zinc-400', description: 'Waits to see how things go' },
+  { value: 'skeptic', label: 'Skeptic', color: 'bg-yellow-500', borderColor: 'border-yellow-500/50', bgMuted: 'bg-yellow-500/10', textColor: 'text-yellow-400', description: 'Questions everything, needs proof' },
+  { value: 'resistant', label: 'Resistant', color: 'bg-red-500', borderColor: 'border-red-500/50', bgMuted: 'bg-red-500/10', textColor: 'text-red-400', description: 'Actively pushes back' },
 ]
 
 const AVATAR_COLORS = [
-  'bg-blue-500',
-  'bg-green-500',
-  'bg-purple-500',
-  'bg-pink-500',
-  'bg-indigo-500',
-  'bg-teal-500',
-  'bg-orange-500',
-  'bg-cyan-500',
+  'from-blue-500 to-blue-600',
+  'from-emerald-500 to-emerald-600',
+  'from-purple-500 to-purple-600',
+  'from-pink-500 to-pink-600',
+  'from-indigo-500 to-indigo-600',
+  'from-teal-500 to-teal-600',
+  'from-orange-500 to-orange-600',
+  'from-cyan-500 to-cyan-600',
 ]
 
 const getInitials = (name: string) => {
@@ -66,14 +66,8 @@ const getAvatarColor = (name: string) => {
 }
 
 const getBorderColor = (type: string) => {
-  switch (type) {
-    case 'champion': return 'border-green-500'
-    case 'early_adopter': return 'border-blue-500'
-    case 'neutral': return 'border-gray-500'
-    case 'skeptic': return 'border-yellow-500'
-    case 'resistant': return 'border-red-500'
-    default: return 'border-gray-700'
-  }
+  const typeInfo = STAKEHOLDER_TYPES.find(t => t.value === type)
+  return typeInfo?.borderColor || 'border-zinc-700'
 }
 
 const getScoreGradient = (score: number) => {
@@ -82,7 +76,7 @@ const getScoreGradient = (score: number) => {
   } else if (score < 66) {
     return 'from-orange-500 via-yellow-500 to-yellow-400'
   } else {
-    return 'from-yellow-400 via-green-500 to-green-400'
+    return 'from-yellow-400 via-emerald-500 to-emerald-400'
   }
 }
 
@@ -254,7 +248,6 @@ export default function ProjectPage() {
     if (!inviteEmail.trim()) return
     setInviteLoading(true)
 
-    // Add to database
     await fetch('/api/team', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -264,7 +257,6 @@ export default function ProjectPage() {
       }),
     })
 
-    // Send email notification
     try {
       await fetch('/api/send-invite', {
         method: 'POST',
@@ -367,13 +359,11 @@ export default function ProjectPage() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast.error('Please upload an image file')
       return
     }
 
-    // Validate file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
       toast.error('Image must be less than 2MB')
       return
@@ -382,7 +372,6 @@ export default function ProjectPage() {
     setUploadingLogo(true)
 
     try {
-      // Upload to Supabase Storage
       const fileExt = file.name.split('.').pop()
       const fileName = `${projectId}-${Date.now()}.${fileExt}`
 
@@ -392,12 +381,10 @@ export default function ProjectPage() {
 
       if (uploadError) throw uploadError
 
-      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('logos')
         .getPublicUrl(fileName)
 
-      // Update project with logo URL
       await fetch(`/api/projects/${projectId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -450,7 +437,7 @@ export default function ProjectPage() {
     const typeInfo = STAKEHOLDER_TYPES.find(t => t.value === type)
     if (!typeInfo) return null
     return (
-      <span className={`${typeInfo.color} text-white text-xs px-2 py-0.5 rounded-full`}>
+      <span className={`${typeInfo.bgMuted} ${typeInfo.textColor} text-xs px-2 py-0.5 rounded-full border ${typeInfo.borderColor}`}>
         {typeInfo.label}
       </span>
     )
@@ -483,13 +470,13 @@ export default function ProjectPage() {
 
   if (loading || !project) {
     return (
-      <div className="min-h-screen bg-gray-900">
+      <div className="min-h-screen bg-zinc-950">
         <Header />
         <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="h-8 bg-gray-700 rounded w-48 mb-8 animate-pulse" />
+          <div className="h-8 bg-zinc-800 rounded w-48 mb-8 animate-pulse" />
           <SkeletonStats />
-          <div className="bg-gray-800 p-6 rounded-lg">
-            <div className="h-6 bg-gray-700 rounded w-32 mb-6 animate-pulse" />
+          <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800">
+            <div className="h-6 bg-zinc-800 rounded w-32 mb-6 animate-pulse" />
             <div className="space-y-4">
               <SkeletonCard />
               <SkeletonCard />
@@ -502,53 +489,53 @@ export default function ProjectPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 overflow-x-hidden">
+    <div className="min-h-screen bg-zinc-950 overflow-x-hidden">
       <Header />
 
       <PageTransition>
         <div className="max-w-7xl mx-auto px-4 py-4">
           <button
             onClick={() => router.push('/dashboard')}
-            className="flex items-center gap-2 text-gray-400 hover:text-white mb-4"
+            className="flex items-center gap-2 text-zinc-400 hover:text-white mb-4 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
             Back to Dashboard
           </button>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             {editingProjectName ? (
               <div className="flex items-center gap-2">
                 <input
                   type="text"
                   value={projectNameEdit}
                   onChange={(e) => setProjectNameEdit(e.target.value)}
-                  className="text-2xl font-bold px-3 py-1 rounded-lg"
+                  className="text-2xl font-bold px-3 py-1 rounded-lg bg-zinc-900 border border-zinc-700 text-white focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500"
                   autoFocus
                 />
                 <button
                   onClick={saveProjectName}
-                  className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm"
+                  className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700 text-sm font-medium transition-colors"
                 >
                   Save
-              </button>
+                </button>
                 <button
                   onClick={() => setEditingProjectName(false)}
-                  className="bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-500 text-sm"
+                  className="bg-zinc-700 text-white px-3 py-1.5 rounded-lg hover:bg-zinc-600 text-sm font-medium transition-colors"
                 >
                   Cancel
-              </button>
+                </button>
               </div>
             ) : (
-                <div className="flex items-center gap-2">
-                  <h1 className="text-3xl font-bold text-white">{project.name}</h1>
-                  <button
-                    onClick={startEditingProject}
-                    className="text-gray-400 hover:text-white"
-                  >
-                    <Pencil className="w-5 h-5" />
-                  </button>
-                </div>
-              )}
-            <div className="flex gap-2">
+              <div className="flex items-center gap-2">
+                <h1 className="text-3xl font-bold text-white">{project.name}</h1>
+                <button
+                  onClick={startEditingProject}
+                  className="text-zinc-500 hover:text-white p-1 rounded-lg hover:bg-zinc-800 transition-colors"
+                >
+                  <Pencil className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2">
               <input
                 type="file"
                 ref={fileInputRef}
@@ -565,169 +552,178 @@ export default function ProjectPage() {
                   />
                   <button
                     onClick={removeLogo}
-                    className="text-gray-400 hover:text-red-500 text-sm"
+                    className="text-zinc-400 hover:text-red-400 text-sm transition-colors"
                   >
                     Remove
-                </button>
+                  </button>
                 </div>
               ) : (
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingLogo}
-                    className="flex items-center gap-2 bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-600 disabled:opacity-50"
-                  >
-                    <Image className="w-5 h-5" />
-                    {uploadingLogo ? 'Uploading...' : 'Add Logo'}
-                  </button>
-                )}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingLogo}
+                  className="flex items-center gap-2 bg-zinc-800 border border-zinc-700 text-white px-4 py-2 rounded-lg hover:bg-zinc-700 hover:border-zinc-600 disabled:opacity-50 transition-all"
+                >
+                  <Image className="w-4 h-4" />
+                  {uploadingLogo ? 'Uploading...' : 'Add Logo'}
+                </button>
+              )}
               <button
                 onClick={() => setShowTeamModal(true)}
-                className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
+                className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-2 rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all hover:shadow-lg hover:shadow-orange-500/25 font-medium"
               >
-                <Users className="w-5 h-5" />
-              Team {teamMembers.length > 0 && `(${teamMembers.length})`}
+                <Users className="w-4 h-4" />
+                Team {teamMembers.length > 0 && `(${teamMembers.length})`}
               </button>
               <button
                 onClick={() => router.push(`/project/${projectId}/report`)}
-                className="flex items-center gap-2 bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
+                className="flex items-center gap-2 bg-zinc-800 border border-zinc-700 text-white px-4 py-2 rounded-lg hover:bg-zinc-700 hover:border-zinc-600 transition-all"
               >
-                <FileText className="w-5 h-5" />
-              Generate Report
-            </button>
+                <FileText className="w-4 h-4" />
+                Generate Report
+              </button>
             </div>
           </div>
         </div>
 
         <main className="max-w-7xl mx-auto px-4 py-8">
-          <div className="grid md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-gray-800 p-6 rounded-lg">
-              <h3 className="text-lg font-semibold text-gray-300 mb-2">Stakeholders</h3>
-              <p className="text-3xl font-bold text-white">
+          {/* Stats Cards */}
+          <div className="grid md:grid-cols-3 gap-4 mb-8">
+            <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl hover:border-orange-500/30 transition-all group">
+              <h3 className="text-sm font-medium text-zinc-400 mb-2">Stakeholders</h3>
+              <p className="text-4xl font-bold bg-gradient-to-r from-orange-400 to-orange-500 bg-clip-text text-transparent">
                 <AnimatedCounter value={stakeholders.length} />
               </p>
             </div>
 
-            <div className="bg-gray-800 p-6 rounded-lg">
-              <h3 className="text-lg font-semibold text-gray-300 mb-2">Engagement</h3>
-              <p className="text-3xl font-bold text-white">
+            <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl hover:border-orange-500/30 transition-all group">
+              <h3 className="text-sm font-medium text-zinc-400 mb-2">Engagement</h3>
+              <p className="text-4xl font-bold bg-gradient-to-r from-orange-400 to-orange-500 bg-clip-text text-transparent">
                 <AnimatedCounter value={analytics?.engagementLevel || 0} />
               </p>
             </div>
 
-            <div className="bg-gray-800 p-6 rounded-lg">
-              <h3 className="text-lg font-semibold text-gray-300 mb-2">Risk Level</h3>
-              <p className={`text-3xl font-bold ${
-                (analytics?.riskAssessment || 0) >= 75 ? 'text-red-500' :
-                  (analytics?.riskAssessment || 0) >= 50 ? 'text-yellow-500' :
-                    'text-green-500'
-                }`}>
+            <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl hover:border-orange-500/30 transition-all group">
+              <h3 className="text-sm font-medium text-zinc-400 mb-2">Risk Level</h3>
+              <p className={`text-4xl font-bold ${
+                (analytics?.riskAssessment || 0) >= 75 ? 'text-red-400' :
+                (analytics?.riskAssessment || 0) >= 50 ? 'text-yellow-400' :
+                'text-emerald-400'
+              }`}>
                 <AnimatedCounter value={analytics?.riskAssessment || 0} suffix="%" />
               </p>
             </div>
           </div>
 
-          <div className="bg-gray-800 p-6 rounded-lg">
-            <div className="flex items-center justify-between mb-6">
+          {/* Stakeholders Section */}
+          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <h2 className="text-2xl font-bold text-white">Stakeholders</h2>
               <button
                 onClick={() => setIsChatOpen(true)}
-                className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
+                className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-5 py-2.5 rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all hover:shadow-lg hover:shadow-orange-500/25 font-medium group"
               >
-                <Sparkles className="w-5 h-5" />
-              Ask AI Coach
-            </button>
+                <Sparkles className="w-5 h-5 group-hover:animate-pulse" />
+                Ask AI Coach
+              </button>
             </div>
 
-            <form onSubmit={addStakeholder} className="flex gap-2 mb-6">
+            {/* Add Stakeholder Form */}
+            <form onSubmit={addStakeholder} className="flex flex-col sm:flex-row gap-2 mb-6">
               <input
                 type="text"
                 value={newStakeholderName}
                 onChange={(e) => setNewStakeholderName(e.target.value)}
                 placeholder="Name..."
-                className="flex-1 px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="flex-1 px-4 py-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-white placeholder-zinc-500 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all"
               />
               <input
                 type="text"
                 value={newStakeholderRole}
                 onChange={(e) => setNewStakeholderRole(e.target.value)}
                 placeholder="Role..."
-                className="flex-1 px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="flex-1 px-4 py-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-white placeholder-zinc-500 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all"
               />
               <button
                 type="submit"
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-2.5 rounded-lg hover:from-orange-600 hover:to-orange-700 flex items-center justify-center gap-2 font-medium transition-all hover:shadow-lg hover:shadow-orange-500/25"
               >
                 <Plus className="w-5 h-5" />
-              Add
-            </button>
+                Add
+              </button>
             </form>
 
+            {/* Stakeholder Cards */}
             <div className="space-y-4">
-              {stakeholders.map((s) => (
-                <div key={s.id} className={`bg-gray-800 border-2 ${getBorderColor((s as any).stakeholder_type)} rounded-xl p-6 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1`}>
-                  <div className="flex justify-between items-start mb-4">
+              {stakeholders.map((s, index) => (
+                <div 
+                  key={s.id} 
+                  className={`bg-zinc-950 border-2 ${getBorderColor((s as any).stakeholder_type)} rounded-xl p-5 transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5 animate-fadeIn`}
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
                     <div
-                      className="cursor-pointer hover:bg-gray-700 rounded p-1 -m-1 flex items-center gap-3"
+                      className="cursor-pointer hover:bg-zinc-900 rounded-lg p-2 -m-2 flex items-center gap-3 transition-colors"
                       onClick={() => openProfile(s)}
                     >
-                      <div className={`w-12 h-12 rounded-full ${getAvatarColor(s.name)} flex items-center justify-center text-white font-bold text-lg`}>
+                      <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${getAvatarColor(s.name)} flex items-center justify-center text-white font-bold text-lg shadow-lg`}>
                         {getInitials(s.name)}
                       </div>
                       <div>
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <h3 className="font-semibold text-white text-lg">{s.name}</h3>
                           {getTypeBadge((s as any).stakeholder_type)}
                         </div>
-                        <p className="text-sm text-gray-400">{s.role}</p>
+                        <p className="text-sm text-zinc-400">{s.role}</p>
                         {((s as any).email || (s as any).phone) && (
-                          <div className="flex gap-3 mt-1 text-xs text-gray-500">
+                          <div className="flex gap-3 mt-1 text-xs text-zinc-500 flex-wrap">
                             {(s as any).email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {(s as any).email}</span>}
                             {(s as any).phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {(s as any).phone}</span>}
                           </div>
                         )}
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       <button
                         onClick={() => getConversationStarters(s)}
-                        className="bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700 flex items-center gap-1 text-sm"
+                        className="bg-orange-500/10 text-orange-400 border border-orange-500/30 px-3 py-1.5 rounded-lg hover:bg-orange-500/20 flex items-center gap-1 text-sm font-medium transition-colors"
                         title="Get conversation starters"
                       >
                         <MessageCircle className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => fetchHistory(s)}
-                        className="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600 flex items-center gap-1 text-sm"
+                        className="bg-zinc-800 text-zinc-300 px-3 py-1.5 rounded-lg hover:bg-zinc-700 flex items-center gap-1 text-sm font-medium transition-colors"
                       >
                         <TrendingUp className="w-4 h-4" />
-                      Trends
-                    </button>
+                        Trends
+                      </button>
                       <button
                         onClick={() => updateScores(s.id)}
-                        className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 flex items-center gap-1 text-sm"
+                        className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg hover:bg-emerald-500/20 flex items-center gap-1 text-sm font-medium transition-colors"
                       >
                         <Save className="w-4 h-4" />
-                      Save
-                    </button>
+                        Save
+                      </button>
                       <button
                         onClick={() => deleteStakeholder(s.id, s.name)}
-                        className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 flex items-center gap-1 text-sm"
+                        className="bg-red-500/10 text-red-400 border border-red-500/30 px-3 py-1.5 rounded-lg hover:bg-red-500/20 flex items-center gap-1 text-sm font-medium transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
 
+                  {/* Score Sliders */}
                   <div className="space-y-3">
                     <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-400">Engagement</span>
+                      <div className="flex justify-between text-sm mb-1.5">
+                        <span className="text-zinc-400">Engagement</span>
                         <span className="text-white font-medium">{editingScores[s.id]?.engagement || 0}/100</span>
                       </div>
                       <div className="relative">
-                        <div className="h-3 bg-gray-700 rounded-full overflow-hidden mb-1">
+                        <div className="h-2.5 bg-zinc-800 rounded-full overflow-hidden mb-1">
                           <div
-                            className={`h-full bg-gradient-to-r ${getScoreGradient(editingScores[s.id]?.engagement || 0)} rounded-full transition-all duration-500 ease-out shadow-lg`}
+                            className={`h-full bg-gradient-to-r ${getScoreGradient(editingScores[s.id]?.engagement || 0)} rounded-full transition-all duration-500 ease-out`}
                             style={{ width: `${editingScores[s.id]?.engagement || 0}%` }}
                           />
                         </div>
@@ -743,14 +739,14 @@ export default function ProjectPage() {
                     </div>
 
                     <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-400">Performance</span>
+                      <div className="flex justify-between text-sm mb-1.5">
+                        <span className="text-zinc-400">Performance</span>
                         <span className="text-white font-medium">{editingScores[s.id]?.performance || 0}/100</span>
                       </div>
                       <div className="relative">
-                        <div className="h-3 bg-gray-700 rounded-full overflow-hidden mb-1">
+                        <div className="h-2.5 bg-zinc-800 rounded-full overflow-hidden mb-1">
                           <div
-                            className={`h-full bg-gradient-to-r ${getScoreGradient(editingScores[s.id]?.performance || 0)} rounded-full transition-all duration-500 ease-out shadow-lg`}
+                            className={`h-full bg-gradient-to-r ${getScoreGradient(editingScores[s.id]?.performance || 0)} rounded-full transition-all duration-500 ease-out`}
                             style={{ width: `${editingScores[s.id]?.performance || 0}%` }}
                           />
                         </div>
@@ -770,78 +766,85 @@ export default function ProjectPage() {
             </div>
 
             {stakeholders.length === 0 && (
-              <p className="text-center text-gray-500 py-8">
-                No stakeholders yet. Add your first one above!
-              </p>
+              <div className="text-center py-12">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center">
+                  <Users className="w-8 h-8 text-zinc-500" />
+                </div>
+                <p className="text-zinc-400 mb-1">No stakeholders yet</p>
+                <p className="text-zinc-600 text-sm">Add your first one above!</p>
+              </div>
             )}
           </div>
-          {/* ADD THIS LINE */}
+
+          {/* Milestone Section */}
           <MilestoneSection projectId={projectId} />
         </main>
       </PageTransition>
 
       {/* Team Modal */}
       {showTeamModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-xl w-full max-w-md p-6">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-zinc-900 rounded-xl w-full max-w-md p-6 border border-zinc-800 shadow-2xl animate-scaleIn">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <Users className="w-6 h-6 text-purple-400" />
+                <div className="w-8 h-8 rounded-lg bg-orange-500/10 border border-orange-500/30 flex items-center justify-center">
+                  <Users className="w-4 h-4 text-orange-400" />
+                </div>
                 Team Members
               </h2>
-              <button onClick={() => setShowTeamModal(false)} className="text-gray-400 hover:text-white">
-                <X className="w-6 h-6" />
+              <button onClick={() => setShowTeamModal(false)} className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800 transition-colors">
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="mb-6">
-              <label className="block text-gray-400 text-sm mb-2">Invite by email</label>
+              <label className="block text-zinc-400 text-sm mb-2 font-medium">Invite by email</label>
               <div className="flex gap-2">
                 <input
                   type="email"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   placeholder="colleague@example.com"
-                  className="flex-1 px-4 py-2 rounded-lg"
+                  className="flex-1 px-4 py-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-white placeholder-zinc-500 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all"
                 />
                 <button
                   onClick={inviteTeamMember}
                   disabled={inviteLoading || !inviteEmail.trim()}
-                  className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 disabled:bg-gray-600 flex items-center gap-1"
+                  className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-2.5 rounded-lg hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 transition-all"
                 >
                   <UserPlus className="w-5 h-5" />
                 </button>
               </div>
-              <p className="text-gray-500 text-xs mt-2">
+              <p className="text-zinc-500 text-xs mt-2">
                 They'll see this project in their "Shared With You" section
               </p>
             </div>
 
             <div className="space-y-2">
               {teamMembers.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">No team members yet</p>
+                <p className="text-zinc-500 text-center py-4">No team members yet</p>
               ) : (
-                  teamMembers.map(member => (
-                    <div key={member.id} className="flex items-center justify-between bg-gray-700 rounded-lg px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Mail className="w-4 h-4 text-gray-400" />
-                        <span className="text-white">{member.invited_email}</span>
-                      </div>
-                      <button
-                        onClick={() => removeTeamMember(member.id)}
-                        className="text-gray-400 hover:text-red-500"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
+                teamMembers.map(member => (
+                  <div key={member.id} className="flex items-center justify-between bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-zinc-500" />
+                      <span className="text-white">{member.invited_email}</span>
                     </div>
-                  ))
-                )}
+                    <button
+                      onClick={() => removeTeamMember(member.id)}
+                      className="text-zinc-500 hover:text-red-400 p-1 rounded hover:bg-zinc-800 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
 
             <div className="mt-6">
               <button
                 onClick={() => setShowTeamModal(false)}
-                className="w-full bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-500"
+                className="w-full bg-zinc-800 text-white px-4 py-2.5 rounded-lg hover:bg-zinc-700 font-medium transition-colors"
               >
                 Done
               </button>
@@ -852,43 +855,45 @@ export default function ProjectPage() {
 
       {/* Stakeholder Profile Modal */}
       {showProfile && profileStakeholder && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-zinc-900 rounded-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto border border-zinc-800 shadow-2xl animate-scaleIn">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <UserIcon className="w-6 h-6 text-blue-400" />
+                <div className="w-8 h-8 rounded-lg bg-orange-500/10 border border-orange-500/30 flex items-center justify-center">
+                  <UserIcon className="w-4 h-4 text-orange-400" />
+                </div>
                 Stakeholder Profile
               </h2>
-              <button onClick={() => setShowProfile(false)} className="text-gray-400 hover:text-white">
-                <X className="w-6 h-6" />
+              <button onClick={() => setShowProfile(false)} className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800 transition-colors">
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-gray-400 text-sm mb-1">Name</label>
+                <label className="block text-zinc-400 text-sm mb-1.5 font-medium">Name</label>
                 <input
                   type="text"
                   value={profileName}
                   onChange={(e) => setProfileName(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg"
+                  className="w-full px-4 py-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-white focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all"
                 />
               </div>
               <div>
-                <label className="block text-gray-400 text-sm mb-1">Role</label>
+                <label className="block text-zinc-400 text-sm mb-1.5 font-medium">Role</label>
                 <input
                   type="text"
                   value={profileRole}
                   onChange={(e) => setProfileRole(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg"
+                  className="w-full px-4 py-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-white focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all"
                 />
               </div>
               <div>
-                <label className="block text-gray-400 text-sm mb-1">Stakeholder Type</label>
+                <label className="block text-zinc-400 text-sm mb-1.5 font-medium">Stakeholder Type</label>
                 <select
                   value={profileType}
                   onChange={(e) => setProfileType(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg bg-white text-black"
+                  className="w-full px-4 py-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-white focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all"
                 >
                   <option value="">Select a type...</option>
                   {STAKEHOLDER_TYPES.map(t => (
@@ -897,51 +902,51 @@ export default function ProjectPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-gray-400 text-sm mb-1 flex items-center gap-1">
+                <label className="block text-zinc-400 text-sm mb-1.5 font-medium flex items-center gap-1">
                   <Mail className="w-4 h-4" /> Email
                 </label>
                 <input
                   type="email"
                   value={profileEmail}
                   onChange={(e) => setProfileEmail(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg"
+                  className="w-full px-4 py-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-white placeholder-zinc-500 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all"
                   placeholder="email@example.com"
                 />
               </div>
               <div>
-                <label className="block text-gray-400 text-sm mb-1 flex items-center gap-1">
+                <label className="block text-zinc-400 text-sm mb-1.5 font-medium flex items-center gap-1">
                   <Phone className="w-4 h-4" /> Phone
                 </label>
                 <input
                   type="tel"
                   value={profilePhone}
                   onChange={(e) => setProfilePhone(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg"
+                  className="w-full px-4 py-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-white placeholder-zinc-500 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all"
                   placeholder="(555) 123-4567"
                 />
               </div>
               <div>
-                <label className="block text-gray-400 text-sm mb-1">Notes</label>
+                <label className="block text-zinc-400 text-sm mb-1.5 font-medium">Notes</label>
                 <textarea
                   value={profileComments}
                   onChange={(e) => setProfileComments(e.target.value)}
                   rows={3}
-                  className="w-full px-4 py-2 rounded-lg"
+                  className="w-full px-4 py-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-white placeholder-zinc-500 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all resize-none"
                   placeholder="Any notes about this stakeholder..."
                 />
               </div>
             </div>
 
-            <div className="flex gap-2 mt-6">
+            <div className="flex gap-3 mt-6">
               <button
                 onClick={saveProfile}
-                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                className="flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-4 py-2.5 rounded-lg hover:from-emerald-600 hover:to-emerald-700 font-medium transition-all"
               >
                 Save Profile
               </button>
               <button
                 onClick={() => setShowProfile(false)}
-                className="flex-1 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-500"
+                className="flex-1 bg-zinc-800 text-white px-4 py-2.5 rounded-lg hover:bg-zinc-700 font-medium transition-colors"
               >
                 Cancel
               </button>
@@ -952,36 +957,38 @@ export default function ProjectPage() {
 
       {/* Conversation Starters Modal */}
       {showConversation && conversationStakeholder && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-xl w-full max-w-2xl p-6 max-h-[80vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-zinc-900 rounded-xl w-full max-w-2xl p-6 max-h-[80vh] overflow-y-auto border border-zinc-800 shadow-2xl animate-scaleIn">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <MessageCircle className="w-6 h-6 text-purple-400" />
+                <div className="w-8 h-8 rounded-lg bg-orange-500/10 border border-orange-500/30 flex items-center justify-center">
+                  <MessageCircle className="w-4 h-4 text-orange-400" />
+                </div>
                 Conversation Starters for {conversationStakeholder.name}
               </h2>
-              <button onClick={() => setShowConversation(false)} className="text-gray-400 hover:text-white">
-                <X className="w-6 h-6" />
+              <button onClick={() => setShowConversation(false)} className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800 transition-colors">
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             {loadingConversation ? (
               <div className="flex items-center justify-center py-12">
                 <div className="flex gap-2">
-                  <div className="w-3 h-3 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-3 h-3 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-3 h-3 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <div className="w-3 h-3 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-3 h-3 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-3 h-3 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                 </div>
               </div>
             ) : (
-                <div className="prose prose-invert max-w-none">
-                  <p className="text-gray-300 whitespace-pre-wrap">{conversationStarters}</p>
-                </div>
-              )}
+              <div className="prose prose-invert max-w-none">
+                <p className="text-zinc-300 whitespace-pre-wrap leading-relaxed">{conversationStarters}</p>
+              </div>
+            )}
 
             <div className="mt-6 flex justify-end">
               <button
                 onClick={() => setShowConversation(false)}
-                className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-500"
+                className="bg-zinc-800 text-white px-6 py-2.5 rounded-lg hover:bg-zinc-700 font-medium transition-colors"
               >
                 Close
               </button>
@@ -992,15 +999,15 @@ export default function ProjectPage() {
 
       {/* Trends Modal */}
       {showTrends && selectedStakeholder && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-xl w-full max-w-2xl p-6">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-zinc-900 rounded-xl w-full max-w-2xl p-6 border border-zinc-800 shadow-2xl animate-scaleIn">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-xl font-bold text-white">{selectedStakeholder.name}</h2>
-                <p className="text-gray-400">{selectedStakeholder.role} - Score History</p>
+                <p className="text-zinc-400">{selectedStakeholder.role} - Score History</p>
               </div>
-              <button onClick={() => setShowTrends(false)} className="text-gray-400 hover:text-white">
-                <X className="w-6 h-6" />
+              <button onClick={() => setShowTrends(false)} className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800 transition-colors">
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -1008,49 +1015,49 @@ export default function ProjectPage() {
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
-                    <XAxis dataKey="date" stroke="#9ca3af" />
-                    <YAxis domain={[0, 100]} stroke="#9ca3af" />
+                    <XAxis dataKey="date" stroke="#71717a" fontSize={12} />
+                    <YAxis domain={[0, 100]} stroke="#71717a" fontSize={12} />
                     <Tooltip
-                      contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
+                      contentStyle={{ backgroundColor: '#18181b', border: '1px solid #27272a', borderRadius: '8px' }}
                       labelStyle={{ color: '#fff' }}
                     />
                     <Line
                       type="monotone"
                       dataKey="engagement"
-                      stroke="#3b82f6"
+                      stroke="#f97316"
                       strokeWidth={2}
                       name="Engagement"
-                      dot={{ fill: '#3b82f6' }}
+                      dot={{ fill: '#f97316', strokeWidth: 0 }}
                     />
                     <Line
                       type="monotone"
                       dataKey="performance"
-                      stroke="#22c55e"
+                      stroke="#10b981"
                       strokeWidth={2}
                       name="Performance"
-                      dot={{ fill: '#22c55e' }}
+                      dot={{ fill: '#10b981', strokeWidth: 0 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
             ) : (
-                <div className="h-64 flex items-center justify-center text-gray-400">
-                  <div className="text-center">
-                    <TrendingUp className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Not enough data yet.</p>
-                    <p className="text-sm">Update scores a few times to see trends.</p>
-                  </div>
+              <div className="h-64 flex items-center justify-center text-zinc-400">
+                <div className="text-center">
+                  <TrendingUp className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>Not enough data yet.</p>
+                  <p className="text-sm text-zinc-500">Update scores a few times to see trends.</p>
                 </div>
-              )}
+              </div>
+            )}
 
-            <div className="mt-4 flex gap-4 justify-center text-sm">
+            <div className="mt-4 flex gap-6 justify-center text-sm">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <span className="text-gray-400">Engagement</span>
+                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                <span className="text-zinc-400">Engagement</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-gray-400">Performance</span>
+                <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+                <span className="text-zinc-400">Performance</span>
               </div>
             </div>
           </div>
