@@ -7,7 +7,6 @@ import { Plus, Pencil, Trash2, X, Users, Sparkles, CheckCircle2, Clock, Pause, X
 import Header from '@/components/Header'
 import PageTransition from '@/components/PageTransition'
 import CreateFromTemplateModal from '@/components/CreateFromTemplateModal'
-import { SuiteApps } from '@/components/SuiteApps'
 import type { Project } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
 
@@ -266,13 +265,6 @@ export default function Dashboard() {
               </div>
             </>
           )}
-
-          {/* Suite Apps - Cross-App Navigation */}
-          <div className="mt-16 max-w-4xl mx-auto">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-              <SuiteApps currentApp="change" />
-            </div>
-          </div>
         </main>
       </PageTransition>
 
