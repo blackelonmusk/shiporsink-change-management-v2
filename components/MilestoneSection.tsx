@@ -44,12 +44,22 @@ export default function MilestoneSection({ projectId }: MilestoneSectionProps) {
 
   if (isLoading) {
     return (
-      <div className="bg-gray-800 rounded-xl p-6 shadow-lg">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mt-8">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-700 rounded w-1/3 mb-4"></div>
+          <div className="h-8 bg-zinc-800 rounded w-1/3 mb-6"></div>
           <div className="space-y-4">
-            <div className="h-32 bg-gray-700 rounded"></div>
-            <div className="h-32 bg-gray-700 rounded"></div>
+            <div className="flex gap-4">
+              <div className="w-12 h-12 bg-zinc-800 rounded-full shrink-0"></div>
+              <div className="flex-1 h-24 bg-zinc-800 rounded-xl"></div>
+            </div>
+            <div className="flex gap-4">
+              <div className="w-12 h-12 bg-zinc-800 rounded-full shrink-0"></div>
+              <div className="flex-1 h-24 bg-zinc-800 rounded-xl"></div>
+            </div>
+            <div className="flex gap-4">
+              <div className="w-12 h-12 bg-zinc-800 rounded-full shrink-0"></div>
+              <div className="flex-1 h-24 bg-zinc-800 rounded-xl"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -58,7 +68,7 @@ export default function MilestoneSection({ projectId }: MilestoneSectionProps) {
 
   return (
     <>
-      <div className="bg-gray-800 rounded-xl p-6 shadow-lg">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mt-8">
         <MilestoneTimeline
           projectId={projectId}
           milestones={milestones || []}

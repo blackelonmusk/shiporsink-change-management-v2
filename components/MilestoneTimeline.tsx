@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Calendar, CheckCircle2, Circle, Edit2, Trash2, AlertTriangle } from 'lucide-react'
+import { Plus, Calendar, CheckCircle2, Edit2, Trash2, AlertTriangle, Target } from 'lucide-react'
 import { formatDistanceToNow, isPast, isToday, isFuture, parseISO } from 'date-fns'
 import ConfettiExplosion from 'react-confetti-explosion'
 
@@ -32,11 +32,11 @@ const MILESTONE_ICONS: Record<string, string> = {
 }
 
 const MILESTONE_COLORS: Record<string, string> = {
-  kickoff: 'from-blue-500 to-blue-600',
+  kickoff: 'from-orange-500 to-orange-600',
   training: 'from-purple-500 to-purple-600',
-  golive: 'from-green-500 to-green-600',
-  review: 'from-orange-500 to-orange-600',
-  other: 'from-gray-500 to-gray-600',
+  golive: 'from-emerald-500 to-emerald-600',
+  review: 'from-cyan-500 to-cyan-600',
+  other: 'from-zinc-500 to-zinc-600',
 }
 
 export default function MilestoneTimeline({
@@ -53,7 +53,6 @@ export default function MilestoneTimeline({
     setCelebratingId(milestoneId)
     onUpdateStatus(milestoneId, 'completed')
     
-    // Stop confetti after 3 seconds
     setTimeout(() => {
       setCelebratingId(null)
     }, 3000)
@@ -100,23 +99,27 @@ export default function MilestoneTimeline({
   return (
     <div className="space-y-6">
       {/* Header with Progress */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex-1">
           <h2 className="text-2xl font-bold text-white mb-2">Project Timeline</h2>
           {totalCount > 0 && (
             <div className="space-y-2">
-              <div className="flex items-center gap-3 text-sm text-gray-400">
+              <div className="flex items-center gap-3 text-sm text-zinc-400">
                 <span className="font-medium">
                   {completedCount} of {totalCount} milestones completed
                 </span>
-                <span className="text-green-400 font-bold">
+                <span className={`font-bold ${progressPercentage === 100 ? 'text-emerald-400' : 'text-orange-400'}`}>
                   {Math.round(progressPercentage)}%
                 </span>
               </div>
               {/* Progress Bar */}
-              <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+              <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-green-500 to-green-400 transition-all duration-700 ease-out"
+                  className={`h-full rounded-full transition-all duration-700 ease-out ${
+                    progressPercentage === 100 
+                      ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' 
+                      : 'bg-gradient-to-r from-orange-500 to-orange-400'
+                  }`}
                   style={{ width: `${progressPercentage}%` }}
                 />
               </div>
@@ -125,7 +128,7 @@ export default function MilestoneTimeline({
         </div>
         <button
           onClick={onAdd}
-          className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center gap-2 transition-all hover:scale-105 shadow-lg"
+          className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-5 py-2.5 rounded-lg hover:from-orange-600 hover:to-orange-700 flex items-center gap-2 transition-all hover:scale-105 hover:shadow-lg hover:shadow-orange-500/25 font-medium"
         >
           <Plus className="w-5 h-5" />
           Add Milestone
@@ -135,15 +138,17 @@ export default function MilestoneTimeline({
       {/* Timeline */}
       {milestones.length === 0 ? (
         // Empty State
-        <div className="text-center py-16 bg-gray-800 rounded-xl border-2 border-dashed border-gray-700">
-          <div className="text-6xl mb-4">🎯</div>
+        <div className="text-center py-16 bg-zinc-950 rounded-xl border-2 border-dashed border-zinc-800">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center">
+            <Target className="w-8 h-8 text-zinc-500" />
+          </div>
           <h3 className="text-xl font-bold text-white mb-2">No milestones yet</h3>
-          <p className="text-gray-400 mb-6">
+          <p className="text-zinc-500 mb-6">
             Add your first milestone to track project progress!
           </p>
           <button
             onClick={onAdd}
-            className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 inline-flex items-center gap-2"
+            className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-3 rounded-lg hover:from-orange-600 hover:to-orange-700 inline-flex items-center gap-2 font-medium transition-all hover:shadow-lg hover:shadow-orange-500/25"
           >
             <Plus className="w-5 h-5" />
             Create First Milestone
@@ -152,10 +157,10 @@ export default function MilestoneTimeline({
       ) : (
         <div className="relative">
           {/* Timeline Line */}
-          <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-gray-600 via-gray-700 to-gray-800" />
+          <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-orange-500/50 via-zinc-700 to-zinc-800" />
 
           {/* Milestones */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             {milestones.map((milestone, index) => {
               const state = getMilestoneState(milestone)
               const icon = MILESTONE_ICONS[milestone.type] || MILESTONE_ICONS.other
@@ -168,9 +173,8 @@ export default function MilestoneTimeline({
                 <div
                   key={milestone.id}
                   className={`
-                    relative pl-20 transition-all duration-300
-                    ${isPastMilestone && milestone.status !== 'completed' ? 'opacity-100' : ''}
-                    ${milestone.status === 'completed' ? 'opacity-70' : 'opacity-100'}
+                    relative pl-20 transition-all duration-300 animate-fadeIn
+                    ${milestone.status === 'completed' ? 'opacity-60' : 'opacity-100'}
                   `}
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
@@ -182,6 +186,7 @@ export default function MilestoneTimeline({
                         duration={3000}
                         particleCount={50}
                         width={400}
+                        colors={['#f97316', '#fb923c', '#10b981', '#34d399', '#fbbf24']}
                       />
                     </div>
                   )}
@@ -193,13 +198,14 @@ export default function MilestoneTimeline({
                       flex items-center justify-center text-2xl
                       bg-gradient-to-br ${colorGradient}
                       shadow-lg
-                      ${isTodayMilestone ? 'animate-pulse ring-4 ring-purple-500 ring-offset-2 ring-offset-gray-900' : ''}
-                      ${milestone.status === 'completed' ? 'ring-4 ring-green-500 ring-offset-2 ring-offset-gray-900' : ''}
+                      ${isTodayMilestone ? 'ring-4 ring-orange-500 ring-offset-2 ring-offset-zinc-950 animate-pulse' : ''}
+                      ${milestone.status === 'completed' ? 'ring-4 ring-emerald-500/50 ring-offset-2 ring-offset-zinc-950' : ''}
+                      ${isOverdue && milestone.status !== 'completed' ? 'ring-4 ring-red-500 ring-offset-2 ring-offset-zinc-950' : ''}
                       transition-all duration-300
                     `}
                   >
                     {milestone.status === 'completed' ? (
-                      <CheckCircle2 className="w-8 h-8 text-white animate-scale-in" />
+                      <CheckCircle2 className="w-8 h-8 text-white" />
                     ) : (
                       <span>{icon}</span>
                     )}
@@ -208,64 +214,63 @@ export default function MilestoneTimeline({
                   {/* Content Card */}
                   <div
                     className={`
-                      bg-gray-800 rounded-xl p-5 border-2
-                      ${isTodayMilestone ? 'border-purple-500 shadow-lg shadow-purple-500/20' : 'border-gray-700'}
-                      ${isOverdue && milestone.status !== 'completed' ? 'border-red-500' : ''}
-                      ${milestone.status === 'completed' ? 'border-green-500/30' : ''}
-                      hover:shadow-xl transition-all duration-300
-                      ${isFuture(parseISO(milestone.date)) && milestone.status !== 'completed' ? 'hover:-translate-y-1' : ''}
+                      bg-zinc-950 rounded-xl p-5 border-2 transition-all duration-200
+                      ${isTodayMilestone ? 'border-orange-500/50 shadow-lg shadow-orange-500/10' : 'border-zinc-800'}
+                      ${isOverdue && milestone.status !== 'completed' ? 'border-red-500/50 bg-red-500/5' : ''}
+                      ${milestone.status === 'completed' ? 'border-emerald-500/20' : ''}
+                      ${!milestone.status || milestone.status !== 'completed' ? 'hover:border-zinc-700 hover:-translate-y-0.5 hover:shadow-xl' : ''}
                     `}
                   >
-                    <div className="flex items-start justify-between mb-3">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className={`text-lg font-bold ${milestone.status === 'completed' ? 'text-gray-400 line-through' : 'text-white'}`}>
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <h3 className={`text-lg font-bold ${milestone.status === 'completed' ? 'text-zinc-400 line-through' : 'text-white'}`}>
                             {milestone.name}
                           </h3>
                           
                           {/* Status Badges */}
                           {isTodayMilestone && milestone.status !== 'completed' && (
-                            <span className="bg-purple-500 text-white text-xs px-2 py-1 rounded-full font-bold animate-pulse">
+                            <span className="bg-orange-500/20 text-orange-300 border border-orange-500/30 text-xs px-2.5 py-1 rounded-full font-bold animate-pulse">
                               TODAY
                             </span>
                           )}
                           
                           {isOverdue && milestone.status !== 'completed' && (
-                            <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-bold flex items-center gap-1">
+                            <span className="bg-red-500/20 text-red-300 border border-red-500/30 text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1">
                               <AlertTriangle className="w-3 h-3" />
                               {getOverdueDays(milestone.date)} days overdue
                             </span>
                           )}
                           
                           {milestone.status === 'completed' && (
-                            <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-bold">
+                            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs px-2.5 py-1 rounded-full font-bold">
                               ✓ Completed
                             </span>
                           )}
                         </div>
 
-                        <div className="flex items-center gap-2 text-sm text-gray-400">
+                        <div className="flex items-center gap-2 text-sm text-zinc-400">
                           <Calendar className="w-4 h-4" />
                           <span>{new Date(milestone.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
-                          <span className="text-gray-600">•</span>
-                          <span className={isTodayMilestone ? 'text-purple-400 font-bold' : ''}>
+                          <span className="text-zinc-600">•</span>
+                          <span className={isTodayMilestone ? 'text-orange-400 font-medium' : ''}>
                             {getRelativeDate(milestone.date)}
                           </span>
                         </div>
 
                         {milestone.description && (
-                          <p className="text-gray-400 text-sm mt-2">
+                          <p className="text-zinc-500 text-sm mt-2">
                             {milestone.description}
                           </p>
                         )}
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="flex gap-2 ml-4">
+                      <div className="flex gap-2">
                         {milestone.status !== 'completed' && (
                           <button
                             onClick={() => handleMarkComplete(milestone.id)}
-                            className="bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 flex items-center gap-1 text-sm font-medium transition-all hover:scale-105"
+                            className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg hover:bg-emerald-500/20 flex items-center gap-1.5 text-sm font-medium transition-all"
                             title="Mark as complete"
                           >
                             <CheckCircle2 className="w-4 h-4" />
@@ -274,14 +279,14 @@ export default function MilestoneTimeline({
                         )}
                         <button
                           onClick={() => onEdit(milestone)}
-                          className="bg-gray-700 text-white px-3 py-1.5 rounded-lg hover:bg-gray-600 transition-colors"
+                          className="bg-zinc-800 text-zinc-300 px-3 py-1.5 rounded-lg hover:bg-zinc-700 transition-colors"
                           title="Edit milestone"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => onDelete(milestone.id)}
-                          className="bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 transition-colors"
+                          className="bg-red-500/10 text-red-400 border border-red-500/30 px-3 py-1.5 rounded-lg hover:bg-red-500/20 transition-colors"
                           title="Delete milestone"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -295,24 +300,6 @@ export default function MilestoneTimeline({
           </div>
         </div>
       )}
-
-      {/* Custom Animations */}
-      <style jsx>{`
-        @keyframes scale-in {
-          from {
-            transform: scale(0);
-            opacity: 0;
-          }
-          to {
-            transform: scale(1);
-            opacity: 1;
-          }
-        }
-
-        .animate-scale-in {
-          animation: scale-in 0.3s ease-out;
-        }
-      `}</style>
     </div>
   )
 }
