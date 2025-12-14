@@ -3,15 +3,13 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { Ship, LogOut, Sun, Moon } from 'lucide-react'
-import { useTheme } from '@/components/ThemeProvider'
+import { Ship, LogOut } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 
 export default function Header() {
   const router = useRouter()
   const supabase = createClientComponentClient()
   const [user, setUser] = useState<User | null>(null)
-  const { theme, toggleTheme } = useTheme()
 
   useEffect(() => {
     const getUser = async () => {
@@ -27,38 +25,31 @@ export default function Header() {
   }
 
   return (
-    <header className="bg-gray-800 border-b border-gray-700">
+    <header className="bg-zinc-900 border-b border-zinc-800">
       <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
         <div 
-          className="flex items-center gap-3 cursor-pointer"
+          className="flex items-center gap-3 cursor-pointer group"
           onClick={() => router.push('/dashboard')}
         >
-          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+          <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center shadow-lg shadow-orange-500/20 group-hover:shadow-orange-500/40 transition-shadow">
             <Ship className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">Ship or Sink</h1>
-            <p className="text-xs text-gray-400">AI Change Management Assistant</p>
+            <h1 className="text-xl font-bold text-white group-hover:text-orange-400 transition-colors">Ship or Sink</h1>
+            <p className="text-xs text-zinc-500">AI Change Management Assistant</p>
           </div>
         </div>
         {user && (
           <div className="flex items-center gap-4">
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-lg bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors"
-              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
-            <span className="text-gray-400 text-sm">
+            <span className="text-zinc-400 text-sm hidden sm:block">
               {user.email}
             </span>
             <button
               onClick={handleSignOut}
-              className="text-gray-400 hover:text-white flex items-center gap-2 transition-colors"
+              className="text-zinc-400 hover:text-white flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-zinc-800 transition-all"
             >
-              <LogOut className="w-5 h-5" />
-              Sign Out
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Sign Out</span>
             </button>
           </div>
         )}
