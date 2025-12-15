@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2, Pencil, Mail, Phone, User as UserIcon, MessageCircle, Users, UserPlus, Image, Upload, Briefcase, Zap, BookOpen } from 'lucide-react'
+import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2, Pencil, Mail, Phone, User as UserIcon, MessageCircle, Users, UserPlus, Image, Upload, Briefcase, Zap } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import toast from 'react-hot-toast'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
@@ -12,7 +12,6 @@ import MilestoneSection from '@/components/MilestoneSection'
 import ADKARScores from '@/components/ADKARScores'
 import MeetingPrepModal from '@/components/MeetingPrepModal'
 import QuickCheckInModal from '@/components/QuickCheckInModal'
-import ScriptLibraryModal from '@/components/ScriptLibraryModal'
 import { SkeletonCard, SkeletonStats } from '@/components/Skeleton'
 import AnimatedCounter from '@/components/AnimatedCounter'
 import PageTransition from '@/components/PageTransition'
@@ -148,9 +147,6 @@ export default function ProjectPage() {
 
   // Quick Check-in state
   const [showQuickCheckIn, setShowQuickCheckIn] = useState(false)
-
-  // Script Library state
-  const [showScriptLibrary, setShowScriptLibrary] = useState(false)
 
   useEffect(() => {
     const getUser = async () => {
@@ -719,20 +715,13 @@ export default function ProjectPage() {
           <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <h2 className="text-2xl font-bold text-white">Stakeholders</h2>
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2">
                 <button
                   onClick={() => setShowQuickCheckIn(true)}
                   className="flex items-center gap-2 bg-zinc-800 border border-zinc-700 text-white px-4 py-2.5 rounded-lg hover:bg-zinc-700 hover:border-zinc-600 transition-all font-medium"
                 >
                   <Zap className="w-5 h-5 text-yellow-400" />
                   Quick Check-in
-                </button>
-                <button
-                  onClick={() => setShowScriptLibrary(true)}
-                  className="flex items-center gap-2 bg-zinc-800 border border-zinc-700 text-white px-4 py-2.5 rounded-lg hover:bg-zinc-700 hover:border-zinc-600 transition-all font-medium"
-                >
-                  <BookOpen className="w-5 h-5 text-purple-400" />
-                  Scripts
                 </button>
                 <button
                   onClick={() => setIsChatOpen(true)}
@@ -1226,13 +1215,6 @@ export default function ProjectPage() {
           updated_at: (s as any).updated_at,
         }))}
         onSaveAll={batchSaveScores}
-      />
-
-      {/* Script Library Modal */}
-      <ScriptLibraryModal
-        isOpen={showScriptLibrary}
-        onClose={() => setShowScriptLibrary(false)}
-        projectId={projectId}
       />
 
       <AIChat
