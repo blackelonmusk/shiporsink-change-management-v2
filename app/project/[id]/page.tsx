@@ -13,6 +13,7 @@ import ADKARScores from '@/components/ADKARScores'
 import MeetingPrepModal from '@/components/MeetingPrepModal'
 import QuickCheckInModal from '@/components/QuickCheckInModal'
 import ScriptLibraryModal from '@/components/ScriptLibraryModal'
+import ConversationStartersModal from '@/components/ConversationStartersModal'
 import { SkeletonCard, SkeletonStats } from '@/components/Skeleton'
 import AnimatedCounter from '@/components/AnimatedCounter'
 import PageTransition from '@/components/PageTransition'
@@ -132,10 +133,7 @@ export default function ProjectPage() {
   const [profileType, setProfileType] = useState('')
 
   // Conversation starters state
-  const [showConversation, setShowConversation] = useState(false)
-  const [conversationStakeholder, setConversationStakeholder] = useState<Stakeholder | null>(null)
-  const [conversationStarters, setConversationStarters] = useState('')
-  const [loadingConversation, setLoadingConversation] = useState(false)
+  const [conversationStakeholder, setConversationStakeholder] = useState<any>(null)
 
   // Team sharing state
   const [showTeamModal, setShowTeamModal] = useState(false)
@@ -250,45 +248,18 @@ export default function ProjectPage() {
     fetchData()
   }
 
-  const getConversationStarters = async (s: Stakeholder) => {
-    setConversationStakeholder(s)
-    setShowConversation(true)
-    setLoadingConversation(true)
-    setConversationStarters('')
-
-    const typeLabel = STAKEHOLDER_TYPES.find(t => t.value === (s as any).stakeholder_type)?.label || 'Unknown'
+  const openConversationStarters = (s: Stakeholder) => {
     const scores = editingScores[s.id]
-
-    try {
-      const response = await fetch('https://shiporsink-ai-api.vercel.app/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question: `Give me 5 specific conversation starters for ${s.name} (${s.role}, ${typeLabel} type). Their engagement is ${s.engagement_score}/100 and performance is ${s.performance_score}/100. ADKAR scores: Awareness ${scores?.awareness_score || 50}, Desire ${scores?.desire_score || 50}, Knowledge ${scores?.knowledge_score || 50}, Ability ${scores?.ability_score || 50}, Reinforcement ${scores?.reinforcement_score || 50}. Notes about them: ${s.comments || 'No notes yet'}. Format as a numbered list with the exact phrases I should say in quotes, followed by a brief explanation of why each works.`,
-          projectContext: {
-            projectName: project?.name || '',
-            status: project?.status || '',
-            riskLevel: analytics?.riskAssessment || 0,
-            totalEngagement: analytics?.engagementLevel || 0,
-            stakeholders: [{
-              name: s.name,
-              role: s.role,
-              engagement: s.engagement_score,
-              performance: s.performance_score,
-              comments: s.comments || '',
-              stakeholder_type: (s as any).stakeholder_type || '',
-            }]
-          }
-        })
-      })
-
-      const data = await response.json()
-      setConversationStarters(data.response)
-    } catch (error) {
-      setConversationStarters('Sorry, I encountered an error generating conversation starters. Please try again.')
-    }
-
-    setLoadingConversation(false)
+    setConversationStakeholder({
+      ...s,
+      stakeholder_type: (s as any).stakeholder_type,
+      comments: s.comments || '',
+      awareness_score: scores?.awareness_score ?? 50,
+      desire_score: scores?.desire_score ?? 50,
+      knowledge_score: scores?.knowledge_score ?? 50,
+      ability_score: scores?.ability_score ?? 50,
+      reinforcement_score: scores?.reinforcement_score ?? 50,
+    })
   }
 
   const inviteTeamMember = async () => {
@@ -809,7 +780,7 @@ export default function ProjectPage() {
                         Prep
                       </button>
                       <button
-                        onClick={() => getConversationStarters(s)}
+                        onClick={() => openConversationStarters(s)}
                         className="bg-orange-500/10 text-orange-400 border border-orange-500/30 px-3 py-1.5 rounded-lg hover:bg-orange-500/20 flex items-center gap-1 text-sm font-medium transition-colors"
                         title="Get conversation starters"
                       >
@@ -1094,46 +1065,16 @@ export default function ProjectPage() {
       )}
 
       {/* Conversation Starters Modal */}
-      {showConversation && conversationStakeholder && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-zinc-900 rounded-xl w-full max-w-2xl p-6 max-h-[80vh] overflow-y-auto border border-zinc-800 shadow-2xl animate-scaleIn">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-orange-500/10 border border-orange-500/30 flex items-center justify-center">
-                  <MessageCircle className="w-4 h-4 text-orange-400" />
-                </div>
-                Conversation Starters for {conversationStakeholder.name}
-              </h2>
-              <button onClick={() => setShowConversation(false)} className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800 transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {loadingConversation ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="flex gap-2">
-                  <div className="w-3 h-3 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-3 h-3 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-3 h-3 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
-              </div>
-            ) : (
-              <div className="prose prose-invert max-w-none">
-                <p className="text-zinc-300 whitespace-pre-wrap leading-relaxed">{conversationStarters}</p>
-              </div>
-            )}
-
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={() => setShowConversation(false)}
-                className="bg-zinc-800 text-white px-6 py-2.5 rounded-lg hover:bg-zinc-700 font-medium transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConversationStartersModal
+        isOpen={!!conversationStakeholder}
+        onClose={() => setConversationStakeholder(null)}
+        stakeholder={conversationStakeholder || {}}
+        projectId={projectId}
+        projectName={project?.name || ''}
+        projectStatus={project?.status || ''}
+        riskLevel={analytics?.riskAssessment || 0}
+        engagementLevel={analytics?.engagementLevel || 0}
+      />
 
       {/* Trends Modal */}
       {showTrends && selectedStakeholder && (
