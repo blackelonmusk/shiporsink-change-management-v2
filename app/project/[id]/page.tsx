@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2, Pencil, Mail, Phone, User as UserIcon, MessageCircle, Users, UserPlus, Image, Upload, Briefcase } from 'lucide-react'
+import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2, Pencil, Mail, Phone, User as UserIcon, MessageCircle, Users, UserPlus, Image, Upload, Briefcase, Zap } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import toast from 'react-hot-toast'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
@@ -11,6 +11,7 @@ import Header from '@/components/Header'
 import MilestoneSection from '@/components/MilestoneSection'
 import ADKARScores from '@/components/ADKARScores'
 import MeetingPrepModal from '@/components/MeetingPrepModal'
+import QuickCheckInModal from '@/components/QuickCheckInModal'
 import { SkeletonCard, SkeletonStats } from '@/components/Skeleton'
 import AnimatedCounter from '@/components/AnimatedCounter'
 import PageTransition from '@/components/PageTransition'
@@ -143,6 +144,9 @@ export default function ProjectPage() {
 
   // Meeting Prep state
   const [meetingPrepStakeholder, setMeetingPrepStakeholder] = useState<any>(null)
+
+  // Quick Check-in state
+  const [showQuickCheckIn, setShowQuickCheckIn] = useState(false)
 
   useEffect(() => {
     const getUser = async () => {
@@ -383,6 +387,29 @@ export default function ProjectPage() {
     })
 
     toast.success('ADKAR scores saved!')
+    fetchData()
+  }
+
+  const batchSaveScores = async (updates: Array<{
+    id: string
+    engagement_score: number
+    performance_score: number
+    awareness_score: number
+    desire_score: number
+    knowledge_score: number
+    ability_score: number
+    reinforcement_score: number
+  }>) => {
+    // Save all updates in parallel
+    await Promise.all(
+      updates.map(update =>
+        fetch('/api/stakeholders', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(update),
+        })
+      )
+    )
     fetchData()
   }
 
@@ -688,13 +715,22 @@ export default function ProjectPage() {
           <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <h2 className="text-2xl font-bold text-white">Stakeholders</h2>
-              <button
-                onClick={() => setIsChatOpen(true)}
-                className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-5 py-2.5 rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all hover:shadow-lg hover:shadow-orange-500/25 font-medium group"
-              >
-                <Sparkles className="w-5 h-5 group-hover:animate-pulse" />
-                Ask AI Coach
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowQuickCheckIn(true)}
+                  className="flex items-center gap-2 bg-zinc-800 border border-zinc-700 text-white px-4 py-2.5 rounded-lg hover:bg-zinc-700 hover:border-zinc-600 transition-all font-medium"
+                >
+                  <Zap className="w-5 h-5 text-yellow-400" />
+                  Quick Check-in
+                </button>
+                <button
+                  onClick={() => setIsChatOpen(true)}
+                  className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-5 py-2.5 rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all hover:shadow-lg hover:shadow-orange-500/25 font-medium group"
+                >
+                  <Sparkles className="w-5 h-5 group-hover:animate-pulse" />
+                  Ask AI Coach
+                </button>
+              </div>
             </div>
 
             {/* Add Stakeholder Form */}
@@ -1162,6 +1198,23 @@ export default function ProjectPage() {
         stakeholder={meetingPrepStakeholder || {}}
         projectName={project?.name || ''}
         projectStatus={project?.status || ''}
+      />
+
+      {/* Quick Check-in Modal */}
+      <QuickCheckInModal
+        isOpen={showQuickCheckIn}
+        onClose={() => setShowQuickCheckIn(false)}
+        stakeholders={stakeholders.map(s => ({
+          ...s,
+          stakeholder_type: (s as any).stakeholder_type,
+          awareness_score: editingScores[s.id]?.awareness_score ?? (s as any).awareness_score ?? 50,
+          desire_score: editingScores[s.id]?.desire_score ?? (s as any).desire_score ?? 50,
+          knowledge_score: editingScores[s.id]?.knowledge_score ?? (s as any).knowledge_score ?? 50,
+          ability_score: editingScores[s.id]?.ability_score ?? (s as any).ability_score ?? 50,
+          reinforcement_score: editingScores[s.id]?.reinforcement_score ?? (s as any).reinforcement_score ?? 50,
+          updated_at: (s as any).updated_at,
+        }))}
+        onSaveAll={batchSaveScores}
       />
 
       <AIChat
