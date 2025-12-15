@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2, Pencil, Mail, Phone, User as UserIcon, MessageCircle, Users, UserPlus, Image, Upload, Briefcase, Zap, BookOpen } from 'lucide-react'
+import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2, Pencil, Mail, Phone, User as UserIcon, MessageCircle, Users, UserPlus, Image, Upload, Briefcase, Zap, BookOpen, Calendar, CalendarPlus } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import toast from 'react-hot-toast'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
@@ -14,6 +14,7 @@ import MeetingPrepModal from '@/components/MeetingPrepModal'
 import QuickCheckInModal from '@/components/QuickCheckInModal'
 import ScriptLibraryModal from '@/components/ScriptLibraryModal'
 import ConversationStartersModal from '@/components/ConversationStartersModal'
+import UpcomingWidget from '@/components/UpcomingWidget'
 import { SkeletonCard, SkeletonStats } from '@/components/Skeleton'
 import AnimatedCounter from '@/components/AnimatedCounter'
 import PageTransition from '@/components/PageTransition'
@@ -150,6 +151,12 @@ export default function ProjectPage() {
   // Script Library state
   const [showScriptLibrary, setShowScriptLibrary] = useState(false)
 
+  // Follow-up scheduling state
+  const [profileFollowups, setProfileFollowups] = useState<any[]>([])
+  const [newFollowupDate, setNewFollowupDate] = useState('')
+  const [newFollowupTitle, setNewFollowupTitle] = useState('')
+  const [addingFollowup, setAddingFollowup] = useState(false)
+
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -200,7 +207,7 @@ export default function ProjectPage() {
     }
   }
 
-  const openProfile = (s: Stakeholder) => {
+  const openProfile = async (s: Stakeholder) => {
     setProfileStakeholder(s)
     setProfileName(s.name)
     setProfileRole(s.role)
@@ -208,7 +215,58 @@ export default function ProjectPage() {
     setProfilePhone((s as any).phone || '')
     setProfileComments(s.comments || '')
     setProfileType((s as any).stakeholder_type || '')
+    setProfileFollowups([])
+    setNewFollowupDate('')
+    setNewFollowupTitle('')
     setShowProfile(true)
+
+    // Fetch followups for this stakeholder
+    try {
+      const res = await fetch(`/api/followups?stakeholderId=${s.id}`)
+      if (res.ok) {
+        const data = await res.json()
+        setProfileFollowups(data.filter((f: any) => !f.completed))
+      }
+    } catch (error) {
+      console.error('Error fetching followups:', error)
+    }
+  }
+
+  const addFollowup = async () => {
+    if (!newFollowupDate || !newFollowupTitle.trim() || !profileStakeholder) return
+    setAddingFollowup(true)
+
+    try {
+      const res = await fetch('/api/followups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project_id: projectId,
+          stakeholder_id: profileStakeholder.id,
+          scheduled_date: newFollowupDate,
+          title: newFollowupTitle,
+        }),
+      })
+
+      if (res.ok) {
+        const newFollowup = await res.json()
+        setProfileFollowups(prev => [...prev, newFollowup].sort((a, b) => 
+          new Date(a.scheduled_date).getTime() - new Date(b.scheduled_date).getTime()
+        ))
+        setNewFollowupDate('')
+        setNewFollowupTitle('')
+        toast.success('Follow-up scheduled!')
+      }
+    } catch (error) {
+      toast.error('Failed to schedule follow-up')
+    }
+    setAddingFollowup(false)
+  }
+
+  const deleteFollowup = async (id: string) => {
+    await fetch(`/api/followups?id=${id}`, { method: 'DELETE' })
+    setProfileFollowups(prev => prev.filter(f => f.id !== id))
+    toast.success('Follow-up removed')
   }
 
   const openMeetingPrep = (s: Stakeholder) => {
@@ -686,6 +744,11 @@ export default function ProjectPage() {
             </div>
           </div>
 
+          {/* Upcoming Follow-ups Widget */}
+          <div className="mb-8">
+            <UpcomingWidget projectId={projectId} />
+          </div>
+
           {/* Stakeholders Section */}
           <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -781,10 +844,11 @@ export default function ProjectPage() {
                       </button>
                       <button
                         onClick={() => openConversationStarters(s)}
-                        className="bg-orange-500/10 text-orange-400 border border-orange-500/30 px-3 py-1.5 rounded-lg hover:bg-orange-500/20 flex items-center gap-1 text-sm font-medium transition-colors"
+                        className="bg-orange-500/10 text-orange-400 border border-orange-500/30 px-3 py-1.5 rounded-lg hover:bg-orange-500/20 flex items-center gap-1.5 text-sm font-medium transition-colors"
                         title="Get conversation starters"
                       >
                         <MessageCircle className="w-4 h-4" />
+                        Talk
                       </button>
                       <button
                         onClick={() => fetchHistory(s)}
@@ -1043,6 +1107,68 @@ export default function ProjectPage() {
                   className="w-full px-4 py-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-white placeholder-zinc-500 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all resize-none"
                   placeholder="Any notes about this stakeholder..."
                 />
+              </div>
+            </div>
+
+            {/* Scheduled Follow-ups Section */}
+            <div className="mt-6 pt-6 border-t border-zinc-800">
+              <div className="flex items-center gap-2 mb-4">
+                <Calendar className="w-5 h-5 text-purple-400" />
+                <h3 className="font-medium text-white">Scheduled Follow-ups</h3>
+              </div>
+
+              {/* Existing follow-ups */}
+              {profileFollowups.length > 0 && (
+                <div className="space-y-2 mb-4">
+                  {profileFollowups.map(followup => (
+                    <div 
+                      key={followup.id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-zinc-950 border border-zinc-800"
+                    >
+                      <div>
+                        <p className="text-sm text-white">{followup.title}</p>
+                        <p className="text-xs text-zinc-500">
+                          {new Date(followup.scheduled_date + 'T00:00:00').toLocaleDateString('en-US', { 
+                            weekday: 'short', 
+                            month: 'short', 
+                            day: 'numeric' 
+                          })}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => deleteFollowup(followup.id)}
+                        className="p-1.5 rounded hover:bg-zinc-800 text-zinc-500 hover:text-red-400 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add new follow-up */}
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={newFollowupDate}
+                  onChange={(e) => setNewFollowupDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="px-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-white text-sm focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all"
+                />
+                <input
+                  type="text"
+                  value={newFollowupTitle}
+                  onChange={(e) => setNewFollowupTitle(e.target.value)}
+                  placeholder="Follow-up reason..."
+                  className="flex-1 px-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-white placeholder-zinc-500 text-sm focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all"
+                />
+                <button
+                  onClick={addFollowup}
+                  disabled={!newFollowupDate || !newFollowupTitle.trim() || addingFollowup}
+                  className="px-3 py-2 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/30 hover:bg-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <CalendarPlus className="w-5 h-5" />
+                </button>
               </div>
             </div>
 
