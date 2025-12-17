@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { X, Zap, Save, ChevronDown, ChevronUp, Users, Clock, CheckCircle2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -51,12 +51,12 @@ interface LocalScores {
   }
 }
 
-const STAKEHOLDER_TYPE_COLORS: Record<string, string> = {
-  champion: 'text-emerald-400',
-  early_adopter: 'text-cyan-400',
-  neutral: 'text-zinc-400',
-  skeptic: 'text-yellow-400',
-  resistant: 'text-red-400',
+const STAKEHOLDER_TYPE_COLORS: Record<string, { text: string; bg: string; border: string }> = {
+  champion: { text: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/30' },
+  early_adopter: { text: 'text-cyan-400', bg: 'bg-cyan-500/20', border: 'border-cyan-500/30' },
+  neutral: { text: 'text-zinc-400', bg: 'bg-zinc-500/20', border: 'border-zinc-500/30' },
+  skeptic: { text: 'text-yellow-400', bg: 'bg-yellow-500/20', border: 'border-yellow-500/30' },
+  resistant: { text: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500/30' },
 }
 
 const getScoreColor = (score: number) => {
@@ -66,9 +66,9 @@ const getScoreColor = (score: number) => {
 }
 
 const getScoreBarColor = (score: number) => {
-  if (score >= 70) return 'bg-emerald-500'
-  if (score >= 40) return 'bg-yellow-500'
-  return 'bg-red-500'
+  if (score >= 70) return 'bg-gradient-to-r from-emerald-500 to-emerald-400'
+  if (score >= 40) return 'bg-gradient-to-r from-yellow-500 to-yellow-400'
+  return 'bg-gradient-to-r from-red-500 to-red-400'
 }
 
 const getInitials = (name: string) => {
@@ -79,47 +79,76 @@ const getInitials = (name: string) => {
   return name.slice(0, 2).toUpperCase()
 }
 
+// Custom slider component with colored progress bar
+const ColoredSlider = ({ 
+  value, 
+  onChange, 
+  label 
+}: { 
+  value: number
+  onChange: (value: number) => void
+  label: string
+}) => {
+  return (
+    <div>
+      <div className="flex justify-between text-sm mb-1.5">
+        <span className="text-zinc-400">{label}</span>
+        <span className={`font-bold ${getScoreColor(value)}`}>{value}</span>
+      </div>
+      <div className="relative h-3 bg-zinc-800 rounded-full overflow-hidden">
+        {/* Colored progress bar */}
+        <div 
+          className={`absolute inset-y-0 left-0 rounded-full transition-all duration-150 ${getScoreBarColor(value)}`}
+          style={{ width: `${value}%` }}
+        />
+        {/* Slider thumb track */}
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={value}
+          onChange={(e) => onChange(parseInt(e.target.value))}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+        />
+        {/* Visual thumb */}
+        <div 
+          className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg border-2 border-zinc-300 pointer-events-none transition-all duration-150"
+          style={{ left: `calc(${value}% - 8px)` }}
+        />
+      </div>
+    </div>
+  )
+}
+
 export default function QuickCheckInModal({ isOpen, onClose, stakeholders, onSaveAll }: QuickCheckInModalProps) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  
-  // Initialize local scores from stakeholders
-  const [localScores, setLocalScores] = useState<LocalScores>(() => {
-    const initial: LocalScores = {}
-    stakeholders.forEach(s => {
-      initial[s.id] = {
-        engagement: s.engagement_score,
-        performance: s.performance_score,
-        awareness: s.awareness_score ?? 50,
-        desire: s.desire_score ?? 50,
-        knowledge: s.knowledge_score ?? 50,
-        ability: s.ability_score ?? 50,
-        reinforcement: s.reinforcement_score ?? 50,
-        expanded: false,
-        changed: false,
-      }
-    })
-    return initial
-  })
+  const [localScores, setLocalScores] = useState<LocalScores>({})
+  const prevIsOpenRef = useRef(false)
 
-  // Reset scores when modal opens with new stakeholders
-  useState(() => {
-    const initial: LocalScores = {}
-    stakeholders.forEach(s => {
-      initial[s.id] = {
-        engagement: s.engagement_score,
-        performance: s.performance_score,
-        awareness: s.awareness_score ?? 50,
-        desire: s.desire_score ?? 50,
-        knowledge: s.knowledge_score ?? 50,
-        ability: s.ability_score ?? 50,
-        reinforcement: s.reinforcement_score ?? 50,
-        expanded: false,
-        changed: false,
-      }
-    })
-    setLocalScores(initial)
-  })
+  // Reset scores only when modal opens (not on every render)
+  useEffect(() => {
+    const justOpened = isOpen && !prevIsOpenRef.current
+    prevIsOpenRef.current = isOpen
+
+    if (justOpened && stakeholders.length > 0) {
+      const initial: LocalScores = {}
+      stakeholders.forEach(s => {
+        initial[s.id] = {
+          engagement: s.engagement_score ?? 0,
+          performance: s.performance_score ?? 0,
+          awareness: s.awareness_score ?? 50,
+          desire: s.desire_score ?? 50,
+          knowledge: s.knowledge_score ?? 50,
+          ability: s.ability_score ?? 50,
+          reinforcement: s.reinforcement_score ?? 50,
+          expanded: false,
+          changed: false,
+        }
+      })
+      setLocalScores(initial)
+    }
+  }, [isOpen, stakeholders])
 
   const updateScore = (stakeholderId: string, field: string, value: number) => {
     setLocalScores(prev => ({
@@ -145,7 +174,7 @@ export default function QuickCheckInModal({ isOpen, onClose, stakeholders, onSav
 
   const handleSaveAll = async () => {
     setSaving(true)
-    
+
     const updates: StakeholderUpdate[] = stakeholders
       .filter(s => localScores[s.id]?.changed)
       .map(s => ({
@@ -166,7 +195,7 @@ export default function QuickCheckInModal({ isOpen, onClose, stakeholders, onSav
     }
 
     await onSaveAll(updates)
-    
+
     // Mark all as unchanged
     setLocalScores(prev => {
       const updated = { ...prev }
@@ -175,7 +204,7 @@ export default function QuickCheckInModal({ isOpen, onClose, stakeholders, onSav
       })
       return updated
     })
-    
+
     setSaving(false)
     setSaved(true)
     toast.success(`Updated ${updates.length} stakeholder${updates.length > 1 ? 's' : ''}!`)
@@ -189,7 +218,7 @@ export default function QuickCheckInModal({ isOpen, onClose, stakeholders, onSav
     const now = new Date()
     const diffMs = now.getTime() - date.getTime()
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-    
+
     if (diffDays === 0) return 'Today'
     if (diffDays === 1) return 'Yesterday'
     if (diffDays < 7) return `${diffDays} days ago`
@@ -229,15 +258,17 @@ export default function QuickCheckInModal({ isOpen, onClose, stakeholders, onSav
             stakeholders.map((s, index) => {
               const scores = localScores[s.id]
               if (!scores) return null
-              
+
+              const typeColors = STAKEHOLDER_TYPE_COLORS[s.stakeholder_type || ''] || STAKEHOLDER_TYPE_COLORS.neutral
+
               return (
-                <div 
+                <div
                   key={s.id}
                   className={`bg-zinc-950 rounded-xl border ${scores.changed ? 'border-orange-500/50' : 'border-zinc-800'} p-4 transition-all animate-fadeIn`}
                   style={{ animationDelay: `${index * 30}ms` }}
                 >
                   {/* Stakeholder Header */}
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-600 to-zinc-700 flex items-center justify-center text-white font-bold text-sm">
                         {getInitials(s.name)}
@@ -252,74 +283,37 @@ export default function QuickCheckInModal({ isOpen, onClose, stakeholders, onSav
                         <p className="text-sm text-zinc-500">{s.role}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-zinc-500">
-                      <span className="flex items-center gap-1">
+                    <div className="flex items-center gap-3">
+                      <span className="flex items-center gap-1 text-xs text-zinc-500">
                         <Clock className="w-3 h-3" />
                         {formatLastUpdated(s.updated_at)}
                       </span>
                       {s.stakeholder_type && (
-                        <span className={STAKEHOLDER_TYPE_COLORS[s.stakeholder_type] || 'text-zinc-400'}>
+                        <span className={`text-xs px-2 py-1 rounded-full border ${typeColors.text} ${typeColors.bg} ${typeColors.border}`}>
                           {s.stakeholder_type.replace('_', ' ')}
                         </span>
                       )}
                     </div>
                   </div>
 
-                  {/* Main Scores */}
+                  {/* Main Scores with Colored Bars */}
                   <div className="grid grid-cols-2 gap-4 mb-2">
-                    {/* Engagement */}
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-zinc-400">Engagement</span>
-                        <span className={`font-medium ${getScoreColor(scores.engagement)}`}>{scores.engagement}</span>
-                      </div>
-                      <div className="relative">
-                        <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full ${getScoreBarColor(scores.engagement)} rounded-full transition-all duration-300`}
-                            style={{ width: `${scores.engagement}%` }}
-                          />
-                        </div>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          value={scores.engagement}
-                          onChange={(e) => updateScore(s.id, 'engagement', parseInt(e.target.value))}
-                          className="w-full h-2 bg-transparent rounded-lg appearance-none cursor-pointer absolute top-0 opacity-0"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Performance */}
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-zinc-400">Performance</span>
-                        <span className={`font-medium ${getScoreColor(scores.performance)}`}>{scores.performance}</span>
-                      </div>
-                      <div className="relative">
-                        <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full ${getScoreBarColor(scores.performance)} rounded-full transition-all duration-300`}
-                            style={{ width: `${scores.performance}%` }}
-                          />
-                        </div>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          value={scores.performance}
-                          onChange={(e) => updateScore(s.id, 'performance', parseInt(e.target.value))}
-                          className="w-full h-2 bg-transparent rounded-lg appearance-none cursor-pointer absolute top-0 opacity-0"
-                        />
-                      </div>
-                    </div>
+                    <ColoredSlider
+                      label="Engagement"
+                      value={scores.engagement}
+                      onChange={(value) => updateScore(s.id, 'engagement', value)}
+                    />
+                    <ColoredSlider
+                      label="Performance"
+                      value={scores.performance}
+                      onChange={(value) => updateScore(s.id, 'performance', value)}
+                    />
                   </div>
 
                   {/* ADKAR Expand Toggle */}
                   <button
                     onClick={() => toggleExpanded(s.id)}
-                    className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 mt-2 transition-colors"
+                    className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 mt-3 transition-colors"
                   >
                     {scores.expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                     {scores.expanded ? 'Hide' : 'Show'} ADKAR scores
@@ -327,34 +321,42 @@ export default function QuickCheckInModal({ isOpen, onClose, stakeholders, onSav
 
                   {/* ADKAR Scores (Expanded) */}
                   {scores.expanded && (
-                    <div className="mt-3 pt-3 border-t border-zinc-800 grid grid-cols-5 gap-2 animate-fadeIn">
+                    <div className="mt-3 pt-3 border-t border-zinc-800 grid grid-cols-5 gap-3 animate-fadeIn">
                       {[
-                        { key: 'awareness', label: 'A', color: 'orange' },
-                        { key: 'desire', label: 'D', color: 'pink' },
-                        { key: 'knowledge', label: 'K', color: 'cyan' },
-                        { key: 'ability', label: 'A', color: 'emerald' },
-                        { key: 'reinforcement', label: 'R', color: 'purple' },
-                      ].map((stage) => (
-                        <div key={stage.key} className="text-center">
-                          <div className={`text-xs font-bold text-${stage.color}-400 mb-1`}>{stage.label}</div>
-                          <div className="relative h-16 bg-zinc-800 rounded-lg overflow-hidden">
-                            <div 
-                              className={`absolute bottom-0 w-full bg-${stage.color}-500 transition-all duration-300`}
-                              style={{ height: `${scores[stage.key as keyof typeof scores]}%` }}
-                            />
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={scores[stage.key as keyof typeof scores] as number}
-                              onChange={(e) => updateScore(s.id, stage.key, parseInt(e.target.value))}
-                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                              style={{ writingMode: 'vertical-lr', direction: 'rtl' }}
-                            />
+                        { key: 'awareness', label: 'A', full: 'Awareness' },
+                        { key: 'desire', label: 'D', full: 'Desire' },
+                        { key: 'knowledge', label: 'K', full: 'Knowledge' },
+                        { key: 'ability', label: 'A', full: 'Ability' },
+                        { key: 'reinforcement', label: 'R', full: 'Reinforcement' },
+                      ].map((stage) => {
+                        const stageValue = scores[stage.key as keyof typeof scores] as number
+                        return (
+                          <div key={stage.key} className="text-center">
+                            <div className={`text-xs font-bold mb-1 ${getScoreColor(stageValue)}`} title={stage.full}>
+                              {stage.label}
+                            </div>
+                            <div className="relative h-16 w-6 mx-auto bg-zinc-800 rounded-full overflow-hidden">
+                              {/* Vertical colored bar */}
+                              <div 
+                                className={`absolute bottom-0 left-0 right-0 rounded-full transition-all duration-150 ${getScoreBarColor(stageValue)}`}
+                                style={{ height: `${stageValue}%` }}
+                              />
+                              <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                value={stageValue}
+                                onChange={(e) => updateScore(s.id, stage.key, parseInt(e.target.value))}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                style={{ writingMode: 'vertical-lr', direction: 'rtl' }}
+                              />
+                            </div>
+                            <div className={`text-xs mt-1 font-medium ${getScoreColor(stageValue)}`}>
+                              {stageValue}
+                            </div>
                           </div>
-                          <div className="text-xs text-zinc-500 mt-1">{scores[stage.key as keyof typeof scores]}</div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </div>

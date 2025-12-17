@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   const { data, error } = await supabase
-    .from('projects')
+    .from('change_projects')
     .select('*')
     .eq('id', params.id)
     .single()
@@ -32,7 +32,7 @@ export async function PATCH(
   if (logo_url !== undefined) updateData.logo_url = logo_url
 
   const { data, error } = await supabase
-    .from('projects')
+    .from('change_projects')
     .update(updateData)
     .eq('id', params.id)
     .select()
@@ -50,7 +50,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   const { error } = await supabase
-    .from('projects')
+    .from('change_projects')
     .delete()
     .eq('id', params.id)
 

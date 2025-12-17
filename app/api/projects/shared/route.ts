@@ -11,7 +11,7 @@ export async function GET(request: Request) {
 
   // Get project IDs where user is a member
   const { data: memberships, error: memberError } = await supabase
-    .from('project_members')
+    .from('change_project_members')
     .select('project_id')
     .eq('invited_email', email)
 
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
 
   // Get the actual projects
   const { data: projects, error: projectError } = await supabase
-    .from('projects')
+    .from('change_projects')
     .select('*')
     .in('id', projectIds)
     .order('created_at', { ascending: false })

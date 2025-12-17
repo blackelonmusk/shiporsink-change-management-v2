@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Calendar, Check, Clock, User, ChevronRight } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Calendar, Check, User, ChevronRight, Undo2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface Followup {
@@ -21,6 +21,7 @@ interface Followup {
 interface UpcomingWidgetProps {
   projectId: string
   onViewAll?: () => void
+  onRefresh?: () => void
 }
 
 const STAKEHOLDER_TYPE_COLORS: Record<string, string> = {
@@ -31,9 +32,10 @@ const STAKEHOLDER_TYPE_COLORS: Record<string, string> = {
   resistant: 'bg-red-500',
 }
 
-export default function UpcomingWidget({ projectId, onViewAll }: UpcomingWidgetProps) {
+export default function UpcomingWidget({ projectId, onViewAll, onRefresh }: UpcomingWidgetProps) {
   const [followups, setFollowups] = useState<Followup[]>([])
   const [loading, setLoading] = useState(true)
+  const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     fetchFollowups()
@@ -52,14 +54,59 @@ export default function UpcomingWidget({ projectId, onViewAll }: UpcomingWidgetP
     setLoading(false)
   }
 
-  const markComplete = async (id: string) => {
+  const markComplete = async (followup: Followup) => {
+    // Optimistically remove from UI
+    setFollowups(prev => prev.filter(f => f.id !== followup.id))
+
+    // Mark as complete in database
     await fetch('/api/followups', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, completed: true }),
+      body: JSON.stringify({ id: followup.id, completed: true }),
     })
-    toast.success('Marked complete!')
-    fetchFollowups()
+
+    // Show undo toast
+    toast((t) => (
+      <div className="flex items-center gap-3">
+        <span className="text-sm">Follow-up completed</span>
+        <button
+          onClick={() => {
+            undoComplete(followup)
+            toast.dismiss(t.id)
+          }}
+          className="flex items-center gap-1 px-2 py-1 bg-orange-500 text-white text-xs font-medium rounded hover:bg-orange-600 transition-colors"
+        >
+          <Undo2 className="w-3 h-3" />
+          Undo
+        </button>
+      </div>
+    ), {
+      duration: 5000,
+      style: {
+        background: '#18181b',
+        color: '#fff',
+        border: '1px solid #3f3f46',
+      },
+    })
+
+    onRefresh?.()
+  }
+
+  const undoComplete = async (followup: Followup) => {
+    // Restore in database
+    await fetch('/api/followups', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: followup.id, completed: false }),
+    })
+
+    // Add back to UI
+    setFollowups(prev => [...prev, followup].sort((a, b) => 
+      new Date(a.scheduled_date).getTime() - new Date(b.scheduled_date).getTime()
+    ))
+
+    toast.success('Follow-up restored!')
+    onRefresh?.()
   }
 
   const formatDate = (dateString: string) => {
@@ -77,6 +124,11 @@ export default function UpcomingWidget({ projectId, onViewAll }: UpcomingWidgetP
     }
     if (dateOnly.getTime() === tomorrow.getTime()) {
       return { text: 'Tomorrow', urgent: false }
+    }
+    
+    // Check if overdue
+    if (dateOnly.getTime() < today.getTime()) {
+      return { text: 'Overdue', urgent: true, overdue: true }
     }
     
     const diffDays = Math.ceil((dateOnly.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
@@ -117,6 +169,9 @@ export default function UpcomingWidget({ projectId, onViewAll }: UpcomingWidgetP
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-purple-400" />
           <h3 className="font-medium text-white">Upcoming Follow-ups</h3>
+          <span className="text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full">
+            {followups.length}
+          </span>
         </div>
         {onViewAll && (
           <button 
@@ -153,16 +208,18 @@ export default function UpcomingWidget({ projectId, onViewAll }: UpcomingWidgetP
               
               <div className="flex items-center gap-2 shrink-0">
                 <span className={`text-xs px-2 py-0.5 rounded ${
-                  dateInfo.urgent 
-                    ? 'bg-orange-500/20 text-orange-400' 
-                    : 'bg-zinc-800 text-zinc-400'
+                  (dateInfo as any).overdue
+                    ? 'bg-red-500/20 text-red-400'
+                    : dateInfo.urgent 
+                      ? 'bg-orange-500/20 text-orange-400' 
+                      : 'bg-zinc-800 text-zinc-400'
                 }`}>
                   {dateInfo.text}
                 </span>
                 <button
-                  onClick={() => markComplete(followup.id)}
+                  onClick={() => markComplete(followup)}
                   className="p-1 rounded hover:bg-zinc-800 text-zinc-500 hover:text-emerald-400 opacity-0 group-hover:opacity-100 transition-all"
-                  title="Mark complete"
+                  title="Mark complete (can undo)"
                 >
                   <Check className="w-4 h-4" />
                 </button>

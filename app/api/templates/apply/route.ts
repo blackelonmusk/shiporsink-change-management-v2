@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     // Create project
     const { data: project, error: projectError } = await supabase
-      .from('projects')
+      .from('change_projects')
       .insert({
         name: projectName,
         description: template.guidance,

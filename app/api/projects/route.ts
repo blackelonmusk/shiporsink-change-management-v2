@@ -6,7 +6,7 @@ export async function GET(request: Request) {
   const userId = searchParams.get('userId')
 
   let query = supabase
-    .from('projects')
+    .from('change_projects')
     .select('*')
     .order('created_at', { ascending: false })
 
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   const { name, user_id } = body
 
   const { data, error } = await supabase
-    .from('projects')
+    .from('change_projects')
     .insert([
       {
         name,

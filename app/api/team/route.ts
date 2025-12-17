@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   }
 
   const { data, error } = await supabase
-    .from('project_members')
+    .from('change_project_members')
     .select('*')
     .eq('project_id', projectId)
     .order('created_at', { ascending: true })
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 
   // Check if already invited
   const { data: existing } = await supabase
-    .from('project_members')
+    .from('change_project_members')
     .select('id')
     .eq('project_id', project_id)
     .eq('invited_email', invited_email)
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   }
 
   const { data, error } = await supabase
-    .from('project_members')
+    .from('change_project_members')
     .insert([
       {
         project_id,
@@ -65,7 +65,7 @@ export async function DELETE(request: Request) {
   }
 
   const { error } = await supabase
-    .from('project_members')
+    .from('change_project_members')
     .delete()
     .eq('id', id)
 

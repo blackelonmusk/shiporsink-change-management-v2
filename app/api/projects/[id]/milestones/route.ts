@@ -20,7 +20,7 @@ export async function GET(
 
     // Verify user has access to this project
     const { data: project } = await supabase
-      .from('projects')
+      .from('change_projects')
       .select('id')
       .eq('id', params.id)
       .eq('user_id', session.user.id)
@@ -67,7 +67,7 @@ export async function POST(
 
     // Verify user has access to this project
     const { data: project } = await supabase
-      .from('projects')
+      .from('change_projects')
       .select('id')
       .eq('id', params.id)
       .eq('user_id', session.user.id)
@@ -152,7 +152,7 @@ export async function PATCH(
     }
 
     const { data: project } = await supabase
-      .from('projects')
+      .from('change_projects')
       .select('id')
       .eq('id', milestone.project_id)
       .eq('user_id', session.user.id)
@@ -223,7 +223,7 @@ export async function DELETE(
     }
 
     const { data: project } = await supabase
-      .from('projects')
+      .from('change_projects')
       .select('id')
       .eq('id', milestone.project_id)
       .eq('user_id', session.user.id)
