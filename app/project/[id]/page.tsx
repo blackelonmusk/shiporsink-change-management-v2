@@ -15,6 +15,7 @@ import QuickCheckInModal from '@/components/QuickCheckInModal'
 import ScriptLibraryModal from '@/components/ScriptLibraryModal'
 import ConversationStartersModal from '@/components/ConversationStartersModal'
 import UpcomingWidget from '@/components/UpcomingWidget'
+import AITaskModal from '@/components/AITaskModal'
 import { SkeletonCard, SkeletonStats } from '@/components/Skeleton'
 import AnimatedCounter from '@/components/AnimatedCounter'
 import PageTransition from '@/components/PageTransition'
@@ -150,6 +151,9 @@ export default function ProjectPage() {
 
   // Script Library state
   const [showScriptLibrary, setShowScriptLibrary] = useState(false)
+
+  // AI Task Generator state
+  const [showAITaskModal, setShowAITaskModal] = useState(false)
 
   // Follow-up scheduling state
   const [profileFollowups, setProfileFollowups] = useState<any[]>([])
@@ -703,6 +707,13 @@ export default function ProjectPage() {
               >
                 <Users className="w-4 h-4" />
                 Team {teamMembers.length > 0 && `(${teamMembers.length})`}
+              </button>
+              <button
+                onClick={() => setShowAITaskModal(true)}
+                className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all hover:shadow-lg hover:shadow-purple-500/25 font-medium"
+              >
+                <Sparkles className="w-4 h-4" />
+                Generate Tasks
               </button>
               <button
                 onClick={() => router.push(`/project/${projectId}/report`)}
@@ -1300,6 +1311,33 @@ export default function ProjectPage() {
         isOpen={showScriptLibrary}
         onClose={() => setShowScriptLibrary(false)}
         projectId={projectId}
+      />
+
+      {/* AI Task Generator Modal */}
+      <AITaskModal
+        isOpen={showAITaskModal}
+        onClose={() => setShowAITaskModal(false)}
+        projectId={projectId}
+        projectName={project?.name || ''}
+        projectStatus={project?.status || ''}
+        userId={user?.id || ''}
+        stakeholders={stakeholders.map(s => ({
+          name: s.name,
+          role: s.role,
+          stakeholder_type: (s as any).stakeholder_type,
+          awareness_score: editingScores[s.id]?.awareness_score ?? (s as any).awareness_score ?? 50,
+          desire_score: editingScores[s.id]?.desire_score ?? (s as any).desire_score ?? 50,
+          knowledge_score: editingScores[s.id]?.knowledge_score ?? (s as any).knowledge_score ?? 50,
+          ability_score: editingScores[s.id]?.ability_score ?? (s as any).ability_score ?? 50,
+          reinforcement_score: editingScores[s.id]?.reinforcement_score ?? (s as any).reinforcement_score ?? 50,
+        }))}
+        milestones={(milestones || []).map(m => ({
+          name: m.name,
+          date: m.date,
+          status: m.status,
+        }))}
+        riskLevel={analytics?.riskAssessment || 0}
+        engagementLevel={analytics?.engagementLevel || 0}
       />
 
       <AIChat
