@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     description: 'Free AI-powered change management coaching. Track stakeholders, get ADKAR guidance, and manage organizational change like a pro.',
     images: [
       {
-        url: '/og-image.png',
+        url: '/opengraph-image',
         width: 1200,
         height: 630,
         alt: 'Change - AI Change Management Assistant',
@@ -42,19 +42,12 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Change - AI Change Management Assistant',
     description: 'Free AI-powered change management coaching. Track stakeholders, get ADKAR guidance, and manage organizational change like a pro.',
-    images: ['/og-image.png'],
+    images: ['/twitter-image'],
     creator: '@shiporsink',
   },
   robots: {
     index: true,
     follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
   },
 }
 
@@ -71,9 +64,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <head>
-        <link rel="canonical" href="https://change.shiporsink.ai" />
-      </head>
       <body className="min-h-screen flex flex-col bg-gray-900 overflow-x-hidden w-full">
         <QueryProvider>
           <ThemeProvider>
@@ -89,31 +79,6 @@ export default function RootLayout({
             navigator.serviceWorker.register('/sw.js');
           }`}
         </Script>
-        <Script
-          id="structured-data"
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              '@context': 'https://schema.org',
-              '@type': 'SoftwareApplication',
-              name: 'Change - AI Change Management Assistant',
-              description: 'Free AI-powered change management coaching with ADKAR guidance and stakeholder tracking.',
-              url: 'https://change.shiporsink.ai',
-              applicationCategory: 'BusinessApplication',
-              operatingSystem: 'Web',
-              offers: {
-                '@type': 'Offer',
-                price: '0',
-                priceCurrency: 'USD',
-              },
-              author: {
-                '@type': 'Organization',
-                name: 'Ship or Sink',
-                url: 'https://shiporsink.ai',
-              },
-            }),
-          }}
-        />
       </body>
     </html>
   )
