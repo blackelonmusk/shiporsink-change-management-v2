@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     description: 'Free AI-powered change management coaching. Track stakeholders, get ADKAR guidance, and manage organizational change like a pro.',
     images: [
       {
-        url: '/opengraph-image',
+        url: '/og-image.png',
         width: 1200,
         height: 630,
         alt: 'Change - AI Change Management Assistant',
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Change - AI Change Management Assistant',
     description: 'Free AI-powered change management coaching. Track stakeholders, get ADKAR guidance, and manage organizational change like a pro.',
-    images: ['/twitter-image'],
+    images: ['/og-image.png'],
     creator: '@shiporsink',
   },
   robots: {
