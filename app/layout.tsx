@@ -5,6 +5,7 @@ import ToastProvider from '@/components/ToastProvider'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import QueryProvider from '@/components/QueryProvider'
 import Script from 'next/script'
+import { Analytics } from "@vercel/analytics/react"
 
 export const metadata: Metadata = {
   title: 'Change - AI Change Management Assistant | Free ADKAR Coaching',
@@ -79,6 +80,7 @@ export default function RootLayout({
             navigator.serviceWorker.register('/sw.js');
           }`}
         </Script>
+        <Analytics />
       </body>
     </html>
   )

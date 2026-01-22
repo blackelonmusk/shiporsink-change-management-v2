@@ -1,0 +1,181 @@
+import { NextResponse } from 'next/server'
+import { supabase } from '@/lib/supabase'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+
+// GET - Fetch all global stakeholders for the current user
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const groupId = searchParams.get('groupId') // Optional filter
+
+  const supabaseAuth = createRouteHandlerClient({ cookies })
+  const { data: { user } } = await supabaseAuth.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  let query = supabase
+    .from('global_stakeholders')
+    .select(`
+      id,
+      name,
+      email,
+      phone,
+      role,
+      title,
+      department,
+      notes,
+      avatar_url,
+      group_id,
+      created_at,
+      updated_at,
+      stakeholder_group:stakeholder_groups!group_id (
+        id,
+        name,
+        color
+      )
+    `)
+    .eq('user_id', user.id)
+    .order('name', { ascending: true })
+
+  if (groupId) {
+    query = query.eq('group_id', groupId)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Flatten group info
+  const flattened = data?.map(s => ({
+    ...s,
+    group_name: s.stakeholder_group?.name || null,
+    group_color: s.stakeholder_group?.color || null,
+  }))
+
+  return NextResponse.json(flattened)
+}
+
+// POST - Create a new global stakeholder
+export async function POST(request: Request) {
+  const body = await request.json()
+  const { name, email, phone, role, title, department, notes, group_id } = body
+
+  const supabaseAuth = createRouteHandlerClient({ cookies })
+  const { data: { user } } = await supabaseAuth.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { data, error } = await supabase
+    .from('global_stakeholders')
+    .insert([{
+      user_id: user.id,
+      name,
+      email: email || '',
+      phone: phone || '',
+      role: role || '',
+      title: title || '',
+      department: department || '',
+      notes: notes || '',
+      group_id: group_id || null,
+    }])
+    .select(`
+      *,
+      stakeholder_group:stakeholder_groups!group_id (
+        id,
+        name,
+        color
+      )
+    `)
+    .single()
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({
+    ...data,
+    group_name: data.stakeholder_group?.name || null,
+    group_color: data.stakeholder_group?.color || null,
+  })
+}
+
+// PATCH - Update a global stakeholder
+export async function PATCH(request: Request) {
+  const body = await request.json()
+  const { id, name, email, phone, role, title, department, notes, group_id } = body
+
+  const updates: any = { updated_at: new Date().toISOString() }
+  
+  if (name !== undefined) updates.name = name
+  if (email !== undefined) updates.email = email
+  if (phone !== undefined) updates.phone = phone
+  if (role !== undefined) updates.role = role
+  if (title !== undefined) updates.title = title
+  if (department !== undefined) updates.department = department
+  if (notes !== undefined) updates.notes = notes
+  if (group_id !== undefined) updates.group_id = group_id
+
+  const { data, error } = await supabase
+    .from('global_stakeholders')
+    .update(updates)
+    .eq('id', id)
+    .select(`
+      *,
+      stakeholder_group:stakeholder_groups!group_id (
+        id,
+        name,
+        color
+      )
+    `)
+    .single()
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({
+    ...data,
+    group_name: data.stakeholder_group?.name || null,
+    group_color: data.stakeholder_group?.color || null,
+  })
+}
+
+// DELETE - Delete a global stakeholder (will cascade to project_stakeholders)
+export async function DELETE(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+
+  if (!id) {
+    return NextResponse.json({ error: 'id required' }, { status: 400 })
+  }
+
+  // Check if stakeholder is linked to any projects
+  const { data: links } = await supabase
+    .from('project_stakeholders')
+    .select('id, project_id')
+    .eq('stakeholder_id', id)
+
+  if (links && links.length > 0) {
+    return NextResponse.json({ 
+      error: `This person is linked to ${links.length} project(s). Remove them from projects first, or use force=true to delete everywhere.`,
+      linked_projects: links.length
+    }, { status: 400 })
+  }
+
+  const { error } = await supabase
+    .from('global_stakeholders')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true })
+}
