@@ -1,11 +1,65 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Sparkles, Send, X } from 'lucide-react'
+import { Sparkles, Send, X, Globe } from 'lucide-react'
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
+}
+
+interface CrossProjectContext {
+  projects: Array<{
+    id: string
+    name: string
+    status: string
+    description?: string
+  }>
+  stakeholders: Array<{
+    id: string
+    name: string
+    role: string
+    group?: { id: string; name: string; color: string } | null
+    projectHistory: Array<{
+      projectName: string
+      projectStatus: string
+      stakeholderType: string
+      adkarScores: {
+        awareness: number
+        desire: number
+        knowledge: number
+        ability: number
+        reinforcement: number
+      }
+      engagementScore: number
+      notes?: string
+    }>
+  }>
+  groups: Array<{
+    id: string
+    name: string
+    description?: string
+    memberCount: number
+    projectHistory: Array<{
+      projectName: string
+      sentiment: string
+      adkarScores: {
+        awareness: number
+        desire: number
+        knowledge: number
+        ability: number
+        reinforcement: number
+      }
+    }>
+  }>
+  insights: {
+    totalProjects: number
+    activeProjects: number
+    totalStakeholders: number
+    totalGroups: number
+    resistantPatterns: string[]
+    championPatterns: string[]
+  }
 }
 
 interface AIChatProps {
@@ -41,6 +95,8 @@ export default function AIChat({ isOpen, onClose, projectContext }: AIChatProps)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [crossProjectContext, setCrossProjectContext] = useState<CrossProjectContext | null>(null)
+  const [loadingContext, setLoadingContext] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -53,12 +109,29 @@ export default function AIChat({ isOpen, onClose, projectContext }: AIChatProps)
     scrollToBottom()
   }, [messages, isLoading])
 
-  // Focus input when modal opens
+  // Focus input when modal opens and fetch cross-project context
   useEffect(() => {
     if (isOpen) {
       inputRef.current?.focus()
+      fetchCrossProjectContext()
     }
   }, [isOpen])
+
+  const fetchCrossProjectContext = async () => {
+    if (crossProjectContext) return // Already loaded
+    
+    setLoadingContext(true)
+    try {
+      const res = await fetch('/api/ai-context')
+      if (res.ok) {
+        const data = await res.json()
+        setCrossProjectContext(data)
+      }
+    } catch (error) {
+      console.error('Error fetching cross-project context:', error)
+    }
+    setLoadingContext(false)
+  }
 
   const sendMessage = async (question: string) => {
     if (!question.trim() || isLoading) return
@@ -69,12 +142,48 @@ export default function AIChat({ isOpen, onClose, projectContext }: AIChatProps)
     setIsLoading(true)
 
     try {
+      // Build enhanced context with cross-project data
+      const enhancedContext = {
+        ...projectContext,
+        crossProjectInsights: crossProjectContext ? {
+          totalProjects: crossProjectContext.insights.totalProjects,
+          activeProjects: crossProjectContext.insights.activeProjects,
+          otherProjects: crossProjectContext.projects
+            .filter(p => p.name !== projectContext.projectName)
+            .map(p => ({ name: p.name, status: p.status })),
+          globalStakeholders: crossProjectContext.stakeholders.map(s => ({
+            name: s.name,
+            role: s.role,
+            group: s.group?.name || null,
+            projectHistory: s.projectHistory.map(h => ({
+              project: h.projectName,
+              type: h.stakeholderType,
+              engagement: h.engagementScore,
+              lowestADKAR: getLowestADKAR(h.adkarScores),
+            })),
+          })),
+          groups: crossProjectContext.groups.map(g => ({
+            name: g.name,
+            memberCount: g.memberCount,
+            projectHistory: g.projectHistory.map(h => ({
+              project: h.projectName,
+              sentiment: h.sentiment,
+              lowestADKAR: getLowestADKAR(h.adkarScores),
+            })),
+          })),
+          patterns: {
+            resistant: crossProjectContext.insights.resistantPatterns,
+            champions: crossProjectContext.insights.championPatterns,
+          },
+        } : null,
+      }
+
       const response = await fetch('https://shiporsink-ai-api.vercel.app/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: userMessage,
-          projectContext
+          projectContext: enhancedContext
         })
       })
 
@@ -87,13 +196,26 @@ export default function AIChat({ isOpen, onClose, projectContext }: AIChatProps)
     setIsLoading(false)
   }
 
+  // Helper to find lowest ADKAR score
+  const getLowestADKAR = (scores: { awareness: number; desire: number; knowledge: number; ability: number; reinforcement: number }) => {
+    const entries = [
+      { name: 'Awareness', score: scores.awareness },
+      { name: 'Desire', score: scores.desire },
+      { name: 'Knowledge', score: scores.knowledge },
+      { name: 'Ability', score: scores.ability },
+      { name: 'Reinforcement', score: scores.reinforcement },
+    ]
+    const lowest = entries.reduce((min, e) => e.score < min.score ? e : min, entries[0])
+    return `${lowest.name} (${lowest.score})`
+  }
+
   const suggestedQuestions = [
     "What's my biggest risk right now?",
     "How do I improve engagement?",
-    "Help me prepare for a stakeholder conversation",
-    "What ADKAR stage are my stakeholders in?",
+    "Who has been resistant across projects?",
+    "What patterns do you see in my stakeholders?",
     "Who should I focus on first?",
-    "Draft an email to a resistant stakeholder"
+    "How did IT Department perform in past projects?"
   ]
 
   if (!isOpen) return null
@@ -109,7 +231,18 @@ export default function AIChat({ isOpen, onClose, projectContext }: AIChatProps)
             </div>
             <div>
               <h2 className="text-xl font-bold text-white">AI Change Coach</h2>
-              <p className="text-xs text-gray-400">Powered by Claude</p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-gray-400">Powered by Claude</p>
+                {crossProjectContext && (
+                  <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                    <Globe className="w-3 h-3" />
+                    Cross-project aware
+                  </span>
+                )}
+                {loadingContext && (
+                  <span className="text-xs text-gray-500">Loading context...</span>
+                )}
+              </div>
             </div>
           </div>
           <button 
@@ -120,6 +253,16 @@ export default function AIChat({ isOpen, onClose, projectContext }: AIChatProps)
           </button>
         </div>
 
+        {/* Cross-project summary banner */}
+        {crossProjectContext && crossProjectContext.insights.totalProjects > 1 && (
+          <div className="px-5 py-2 bg-purple-500/10 border-b border-purple-500/20 text-xs text-purple-300">
+            <span className="font-medium">Context:</span> {crossProjectContext.insights.totalProjects} projects, {crossProjectContext.insights.totalStakeholders} stakeholders, {crossProjectContext.insights.totalGroups} groups
+            {crossProjectContext.insights.resistantPatterns.length > 0 && (
+              <span className="ml-2 text-yellow-400">• {crossProjectContext.insights.resistantPatterns.length} resistance patterns detected</span>
+            )}
+          </div>
+        )}
+
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
           {messages.length === 0 && (
@@ -128,7 +271,11 @@ export default function AIChat({ isOpen, onClose, projectContext }: AIChatProps)
                 <Sparkles className="w-10 h-10 text-purple-400" />
               </div>
               <h3 className="text-lg font-semibold text-white mb-2">How can I help you today?</h3>
-              <p className="mb-6 text-sm">Ask me anything about your change management project</p>
+              <p className="mb-6 text-sm">
+                {crossProjectContext 
+                  ? "I can see all your projects and stakeholder history" 
+                  : "Ask me anything about your change management project"}
+              </p>
               <div className="flex flex-wrap gap-2 justify-center max-w-lg mx-auto">
                 {suggestedQuestions.map((q, i) => (
                   <button
