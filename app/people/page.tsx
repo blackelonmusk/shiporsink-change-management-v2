@@ -338,7 +338,7 @@ export default function PeoplePage() {
                       {person.group_name && (
                         <span 
                           className="text-xs px-2 py-0.5 rounded-full"
-                          style={{ backgroundColor: `${person.group_color}20`, color: person.group_color }}
+                          style={{ backgroundColor: `${person.group_color}20`, color: person.group_color || undefined }}
                         >
                           {person.group_name}
                         </span>
