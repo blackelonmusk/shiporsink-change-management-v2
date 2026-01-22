@@ -186,8 +186,8 @@ export default function ProjectPage() {
       setStakeholders(data)
       const scores: { [key: string]: StakeholderScores } = {}
       data.forEach((s: any) => {
-        scores[s.id] = { 
-          engagement: s.engagement_score, 
+        scores[s.id] = {
+          engagement: s.engagement_score,
           performance: s.performance_score,
           awareness_score: s.awareness_score ?? 50,
           desire_score: s.desire_score ?? 50,
@@ -256,7 +256,7 @@ export default function ProjectPage() {
 
       if (res.ok) {
         const newFollowup = await res.json()
-        setProfileFollowups(prev => [...prev, newFollowup].sort((a, b) => 
+        setProfileFollowups(prev => [...prev, newFollowup].sort((a, b) =>
           new Date(a.scheduled_date).getTime() - new Date(b.scheduled_date).getTime()
         ))
         setNewFollowupDate('')
@@ -582,11 +582,11 @@ export default function ProjectPage() {
   const getGroupBadge = (stakeholder: any) => {
     if (!stakeholder.group_name) return null
     return (
-      <span 
+      <span
         className="text-xs px-2 py-0.5 rounded-full"
-        style={{ 
-          backgroundColor: `${stakeholder.group_color}20`, 
-          color: stakeholder.group_color || '#6b7280' 
+        style={{
+          backgroundColor: `${stakeholder.group_color}20`,
+          color: stakeholder.group_color || '#6b7280'
         }}
       >
         {stakeholder.group_name}
@@ -762,11 +762,10 @@ export default function ProjectPage() {
 
             <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl hover:border-orange-500/30 transition-all group">
               <h3 className="text-sm font-medium text-zinc-400 mb-2">Risk Level</h3>
-              <p className={`text-4xl font-bold ${
-                (analytics?.riskAssessment || 0) >= 75 ? 'text-red-400' :
-                (analytics?.riskAssessment || 0) >= 50 ? 'text-yellow-400' :
-                'text-emerald-400'
-              }`}>
+              <p className={`text-4xl font-bold ${(analytics?.riskAssessment || 0) >= 75 ? 'text-red-400' :
+                  (analytics?.riskAssessment || 0) >= 50 ? 'text-yellow-400' :
+                    'text-emerald-400'
+                }`}>
                 <AnimatedCounter value={analytics?.riskAssessment || 0} suffix="%" />
               </p>
             </div>
@@ -818,8 +817,8 @@ export default function ProjectPage() {
             {/* Stakeholder Cards */}
             <div className="space-y-4">
               {stakeholders.map((s, index) => (
-                <div 
-                  key={s.id} 
+                <div
+                  key={s.id}
                   className={`bg-zinc-950 border-2 ${getBorderColor((s as any).stakeholder_type)} rounded-xl p-5 transition-all duration-200 hover:shadow-xl animate-fadeIn`}
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
@@ -1134,17 +1133,17 @@ export default function ProjectPage() {
               {profileFollowups.length > 0 && (
                 <div className="space-y-2 mb-4">
                   {profileFollowups.map(followup => (
-                    <div 
+                    <div
                       key={followup.id}
                       className="flex items-center justify-between p-3 rounded-lg bg-zinc-950 border border-zinc-800"
                     >
                       <div>
                         <p className="text-sm text-white">{followup.title}</p>
                         <p className="text-xs text-zinc-500">
-                          {new Date(followup.scheduled_date + 'T00:00:00').toLocaleDateString('en-US', { 
-                            weekday: 'short', 
-                            month: 'short', 
-                            day: 'numeric' 
+                          {new Date(followup.scheduled_date + 'T00:00:00').toLocaleDateString('en-US', {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric'
                           })}
                         </p>
                       </div>
@@ -1354,6 +1353,7 @@ export default function ProjectPage() {
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
         projectContext={projectContext}
+        projectId={projectId}
       />
     </div>
   )
