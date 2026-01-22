@@ -16,6 +16,7 @@ import ScriptLibraryModal from '@/components/ScriptLibraryModal'
 import ConversationStartersModal from '@/components/ConversationStartersModal'
 import UpcomingWidget from '@/components/UpcomingWidget'
 import AITaskModal from '@/components/AITaskModal'
+import AddStakeholderModal from '@/components/AddStakeholderModal'
 import { SkeletonCard, SkeletonStats } from '@/components/Skeleton'
 import AnimatedCounter from '@/components/AnimatedCounter'
 import PageTransition from '@/components/PageTransition'
@@ -154,6 +155,7 @@ export default function ProjectPage() {
 
   // AI Task Generator state
   const [showAITaskModal, setShowAITaskModal] = useState(false)
+  const [showAddStakeholderModal, setShowAddStakeholderModal] = useState(false)
 
   // Follow-up scheduling state
   const [profileFollowups, setProfileFollowups] = useState<any[]>([])
@@ -804,30 +806,14 @@ export default function ProjectPage() {
               </div>
             </div>
 
-            {/* Add Stakeholder Form */}
-            <form onSubmit={addStakeholder} className="flex flex-col sm:flex-row gap-2 mb-6">
-              <input
-                type="text"
-                value={newStakeholderName}
-                onChange={(e) => setNewStakeholderName(e.target.value)}
-                placeholder="Name..."
-                className="flex-1 px-4 py-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-white placeholder-zinc-500 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all"
-              />
-              <input
-                type="text"
-                value={newStakeholderRole}
-                onChange={(e) => setNewStakeholderRole(e.target.value)}
-                placeholder="Role..."
-                className="flex-1 px-4 py-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-white placeholder-zinc-500 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all"
-              />
-              <button
-                type="submit"
-                className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-2.5 rounded-lg hover:from-orange-600 hover:to-orange-700 flex items-center justify-center gap-2 font-medium transition-all hover:shadow-lg hover:shadow-orange-500/25"
-              >
-                <Plus className="w-5 h-5" />
-                Add
-              </button>
-            </form>
+            {/* Add Stakeholder Button */}
+            <button
+              onClick={() => setShowAddStakeholderModal(true)}
+              className="mb-6 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-2.5 rounded-lg hover:from-orange-600 hover:to-orange-700 flex items-center gap-2 font-medium transition-all hover:shadow-lg hover:shadow-orange-500/25"
+            >
+              <Plus className="w-5 h-5" />
+              Add Stakeholder
+            </button>
 
             {/* Stakeholder Cards */}
             <div className="space-y-4">
@@ -1354,6 +1340,14 @@ export default function ProjectPage() {
         }))}
         riskLevel={analytics?.riskAssessment || 0}
         engagementLevel={analytics?.engagementLevel || 0}
+      />
+
+      <AddStakeholderModal
+        isOpen={showAddStakeholderModal}
+        onClose={() => setShowAddStakeholderModal(false)}
+        projectId={projectId}
+        existingStakeholderIds={stakeholders.map(s => (s as any).stakeholder_id || s.id)}
+        onStakeholderAdded={fetchData}
       />
 
       <AIChat
