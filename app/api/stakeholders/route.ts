@@ -26,6 +26,7 @@ export async function GET(request: Request) {
       ability,
       reinforcement,
       engagement_score,
+      performance_score,
       last_contact_date,
       project_notes,
       created_at,
@@ -58,8 +59,8 @@ export async function GET(request: Request) {
 
   // Flatten the response to match existing frontend expectations
   const flattenedData = data?.map(ps => {
-    const gs = Array.isArray(ps.global_stakeholders) 
-      ? ps.global_stakeholders[0] 
+    const gs = Array.isArray(ps.global_stakeholders)
+      ? ps.global_stakeholders[0]
       : ps.global_stakeholders
     const group = gs?.stakeholder_groups
       ? (Array.isArray(gs.stakeholder_groups) ? gs.stakeholder_groups[0] : gs.stakeholder_groups)
@@ -87,6 +88,7 @@ export async function GET(request: Request) {
       influence_level: ps.influence_level,
       support_level: ps.support_level,
       engagement_score: ps.engagement_score,
+      performance_score: ps.performance_score,
       last_contact_date: ps.last_contact_date,
       project_notes: ps.project_notes,
       comments: ps.project_notes, // Alias for backward compatibility
@@ -165,6 +167,7 @@ export async function POST(request: Request) {
       ability: 50,
       reinforcement: 50,
       engagement_score: 0,
+      performance_score: 0,
     }])
     .select()
     .single()
@@ -211,6 +214,7 @@ export async function POST(request: Request) {
     influence_level: fullRecord.influence_level,
     support_level: fullRecord.support_level,
     engagement_score: fullRecord.engagement_score,
+    performance_score: fullRecord.performance_score,
     awareness: fullRecord.awareness,
     desire: fullRecord.desire,
     knowledge: fullRecord.knowledge,
@@ -268,11 +272,11 @@ export async function PATCH(request: Request) {
   if (body.stakeholder_type !== undefined) projectUpdates.stakeholder_type = body.stakeholder_type
   if (body.influence_level !== undefined) projectUpdates.influence_level = body.influence_level
   if (body.support_level !== undefined) projectUpdates.support_level = body.support_level
-  if (body.engagement_score !== undefined) projectUpdates.engagement_score = body.engagement_score
+  if (body.performance_score !== undefined) projectUpdates.performance_score = body.performance_score
   if (body.last_contact_date !== undefined) projectUpdates.last_contact_date = body.last_contact_date
   if (body.project_notes !== undefined) projectUpdates.project_notes = body.project_notes
   if (body.comments !== undefined) projectUpdates.project_notes = body.comments // Alias
-  
+
   // ADKAR scores (project-specific)
   if (body.awareness !== undefined) projectUpdates.awareness = body.awareness
   if (body.desire !== undefined) projectUpdates.desire = body.desire
@@ -359,6 +363,7 @@ export async function PATCH(request: Request) {
     influence_level: updated.influence_level,
     support_level: updated.support_level,
     engagement_score: updated.engagement_score,
+    performance_score: updated.performance_score,
     awareness: updated.awareness,
     desire: updated.desire,
     knowledge: updated.knowledge,
