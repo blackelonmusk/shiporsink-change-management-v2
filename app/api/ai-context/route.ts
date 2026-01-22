@@ -14,7 +14,7 @@ export async function GET() {
   try {
     // Fetch all projects for this user
     const { data: projects } = await supabase
-      .from('projects')
+      .from('change_projects')
       .select('id, name, status, description, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
@@ -88,7 +88,7 @@ export async function GET() {
     // Map stakeholder performance across projects
     if (projectStakeholders && projects) {
       const projectMap = new Map(projects.map(p => [p.id, p]))
-      
+
       projectStakeholders.forEach(ps => {
         if (!stakeholderHistory[ps.stakeholder_id]) {
           stakeholderHistory[ps.stakeholder_id] = []
@@ -146,8 +146,8 @@ export async function GET() {
 
     // Format global stakeholders with group info
     const formattedStakeholders = (globalStakeholders || []).map(gs => {
-      const groupData = Array.isArray(gs.stakeholder_groups) 
-        ? gs.stakeholder_groups[0] 
+      const groupData = Array.isArray(gs.stakeholder_groups)
+        ? gs.stakeholder_groups[0]
         : gs.stakeholder_groups
 
       return {
