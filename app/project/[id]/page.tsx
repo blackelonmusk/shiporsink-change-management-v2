@@ -577,6 +577,21 @@ export default function ProjectPage() {
     )
   }
 
+  const getGroupBadge = (stakeholder: any) => {
+    if (!stakeholder.group_name) return null
+    return (
+      <span 
+        className="text-xs px-2 py-0.5 rounded-full"
+        style={{ 
+          backgroundColor: `${stakeholder.group_color}20`, 
+          color: stakeholder.group_color || '#6b7280' 
+        }}
+      >
+        {stakeholder.group_name}
+      </span>
+    )
+  }
+
   const projectContext = {
     projectName: project?.name || '',
     status: project?.status || '',
@@ -834,6 +849,7 @@ export default function ProjectPage() {
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <h3 className="font-semibold text-white text-lg">{s.name}</h3>
                           {getTypeBadge((s as any).stakeholder_type)}
+                          {getGroupBadge(s)}
                         </div>
                         <p className="text-sm text-zinc-400">{s.role}</p>
                         {((s as any).email || (s as any).phone) && (

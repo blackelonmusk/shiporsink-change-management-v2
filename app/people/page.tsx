@@ -4,10 +4,12 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   Users, Building2, Plus, Search, Edit2, Trash2, 
-  ChevronLeft, UserPlus, FolderPlus, MoreVertical,
+  UserPlus, FolderPlus,
   Check, X, Briefcase, Mail, Phone
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import Header from '@/components/Header'
+import Sidebar from '@/components/Sidebar'
 
 interface Group {
   id: string
@@ -220,243 +222,239 @@ export default function PeoplePage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950">
-      {/* Header */}
-      <div className="border-b border-zinc-800 bg-zinc-900/50">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
-            >
-              <ChevronLeft className="w-5 h-5 text-zinc-400" />
-            </button>
-            <div>
-              <h1 className="text-xl font-semibold text-white">People & Groups</h1>
+    <div className="min-h-screen bg-zinc-950 flex flex-col">
+      <Header />
+      
+      <div className="flex flex-1">
+        <Sidebar />
+        
+        <main className="flex-1 p-6 md:p-8 overflow-x-hidden">
+          <div className="max-w-5xl mx-auto">
+            {/* Page Header */}
+            <div className="mb-6">
+              <h1 className="text-2xl font-bold text-white">People & Groups</h1>
               <p className="text-sm text-zinc-500">Manage your organization's stakeholders</p>
             </div>
-          </div>
-        </div>
-      </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        {/* Tabs & Actions */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex gap-1 bg-zinc-900 p-1 rounded-lg">
-            <button
-              onClick={() => setActiveTab('people')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeTab === 'people' 
-                  ? 'bg-orange-500 text-white' 
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              People ({stakeholders.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('groups')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeTab === 'groups' 
-                  ? 'bg-orange-500 text-white' 
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <Building2 className="w-4 h-4" />
-              Groups ({groups.length})
-            </button>
-          </div>
+            {/* Tabs & Actions */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+              <div className="flex gap-1 bg-zinc-900 p-1 rounded-lg">
+                <button
+                  onClick={() => setActiveTab('people')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    activeTab === 'people' 
+                      ? 'bg-orange-500 text-white' 
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  <Users className="w-4 h-4" />
+                  People ({stakeholders.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('groups')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    activeTab === 'groups' 
+                      ? 'bg-orange-500 text-white' 
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  <Building2 className="w-4 h-4" />
+                  Groups ({groups.length})
+                </button>
+              </div>
 
-          <div className="flex items-center gap-3">
-            {/* Search */}
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-orange-500 w-64"
-              />
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                {/* Search */}
+                <div className="relative flex-1 sm:flex-initial">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full sm:w-64 pl-9 pr-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+
+                {/* Add Button */}
+                {activeTab === 'people' ? (
+                  <button
+                    onClick={() => {
+                      setEditingPerson(null)
+                      setPersonForm({ name: '', email: '', phone: '', role: '', title: '', department: '', notes: '', group_id: '' })
+                      setShowPersonModal(true)
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Add Person
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setEditingGroup(null)
+                      setGroupForm({ name: '', description: '', color: '#6b7280' })
+                      setShowGroupModal(true)
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+                  >
+                    <FolderPlus className="w-4 h-4" />
+                    Add Group
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Add Button */}
+            {/* Content */}
             {activeTab === 'people' ? (
-              <button
-                onClick={() => {
-                  setEditingPerson(null)
-                  setPersonForm({ name: '', email: '', phone: '', role: '', title: '', department: '', notes: '', group_id: '' })
-                  setShowPersonModal(true)
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-colors"
-              >
-                <UserPlus className="w-4 h-4" />
-                Add Person
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  setEditingGroup(null)
-                  setGroupForm({ name: '', description: '', color: '#6b7280' })
-                  setShowGroupModal(true)
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-colors"
-              >
-                <FolderPlus className="w-4 h-4" />
-                Add Group
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Content */}
-        {activeTab === 'people' ? (
-          <div className="grid gap-3">
-            {filteredStakeholders.length === 0 ? (
-              <div className="text-center py-12 bg-zinc-900 rounded-xl border border-zinc-800">
-                <Users className="w-12 h-12 text-zinc-700 mx-auto mb-3" />
-                <p className="text-zinc-500">No people yet. Add your first stakeholder!</p>
-              </div>
-            ) : (
-              filteredStakeholders.map(person => (
-                <div
-                  key={person.id}
-                  className="flex items-center gap-4 p-4 bg-zinc-900 rounded-xl border border-zinc-800 hover:border-zinc-700 transition-colors group"
-                >
-                  {/* Avatar */}
-                  <div 
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium text-sm shrink-0"
-                    style={{ backgroundColor: person.group_color || '#6b7280' }}
-                  >
-                    {person.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+              <div className="grid gap-3">
+                {filteredStakeholders.length === 0 ? (
+                  <div className="text-center py-12 bg-zinc-900 rounded-xl border border-zinc-800">
+                    <Users className="w-12 h-12 text-zinc-700 mx-auto mb-3" />
+                    <p className="text-zinc-500">No people yet. Add your first stakeholder!</p>
                   </div>
+                ) : (
+                  filteredStakeholders.map(person => (
+                    <div
+                      key={person.id}
+                      className="flex items-center gap-4 p-4 bg-zinc-900 rounded-xl border border-zinc-800 hover:border-zinc-700 transition-colors group"
+                    >
+                      {/* Avatar */}
+                      <div 
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium text-sm shrink-0"
+                        style={{ backgroundColor: person.group_color || '#6b7280' }}
+                      >
+                        {person.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                      </div>
 
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-white">{person.name}</span>
-                      {person.group_name && (
-                        <span 
-                          className="text-xs px-2 py-0.5 rounded-full"
-                          style={{ backgroundColor: `${person.group_color}20`, color: person.group_color || undefined }}
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-white">{person.name}</span>
+                          {person.group_name && (
+                            <span 
+                              className="text-xs px-2 py-0.5 rounded-full"
+                              style={{ backgroundColor: `${person.group_color}20`, color: person.group_color || undefined }}
+                            >
+                              {person.group_name}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-zinc-500 flex-wrap">
+                          {person.role && (
+                            <span className="flex items-center gap-1">
+                              <Briefcase className="w-3 h-3" />
+                              {person.role}
+                            </span>
+                          )}
+                          {person.email && (
+                            <span className="flex items-center gap-1">
+                              <Mail className="w-3 h-3" />
+                              {person.email}
+                            </span>
+                          )}
+                          {person.phone && (
+                            <span className="flex items-center gap-1">
+                              <Phone className="w-3 h-3" />
+                              {person.phone}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => {
+                            setEditingPerson(person)
+                            setPersonForm({
+                              name: person.name,
+                              email: person.email || '',
+                              phone: person.phone || '',
+                              role: person.role || '',
+                              title: person.title || '',
+                              department: person.department || '',
+                              notes: person.notes || '',
+                              group_id: person.group_id || '',
+                            })
+                            setShowPersonModal(true)
+                          }}
+                          className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
                         >
-                          {person.group_name}
-                        </span>
-                      )}
+                          <Edit2 className="w-4 h-4 text-zinc-400" />
+                        </button>
+                        <button
+                          onClick={() => handleDeletePerson(person)}
+                          className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4 text-zinc-400 hover:text-red-400" />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-zinc-500">
-                      {person.role && (
-                        <span className="flex items-center gap-1">
-                          <Briefcase className="w-3 h-3" />
-                          {person.role}
-                        </span>
-                      )}
-                      {person.email && (
-                        <span className="flex items-center gap-1">
-                          <Mail className="w-3 h-3" />
-                          {person.email}
-                        </span>
-                      )}
-                      {person.phone && (
-                        <span className="flex items-center gap-1">
-                          <Phone className="w-3 h-3" />
-                          {person.phone}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => {
-                        setEditingPerson(person)
-                        setPersonForm({
-                          name: person.name,
-                          email: person.email || '',
-                          phone: person.phone || '',
-                          role: person.role || '',
-                          title: person.title || '',
-                          department: person.department || '',
-                          notes: person.notes || '',
-                          group_id: person.group_id || '',
-                        })
-                        setShowPersonModal(true)
-                      }}
-                      className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
-                    >
-                      <Edit2 className="w-4 h-4 text-zinc-400" />
-                    </button>
-                    <button
-                      onClick={() => handleDeletePerson(person)}
-                      className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4 text-zinc-400 hover:text-red-400" />
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {filteredGroups.length === 0 ? (
-              <div className="col-span-full text-center py-12 bg-zinc-900 rounded-xl border border-zinc-800">
-                <Building2 className="w-12 h-12 text-zinc-700 mx-auto mb-3" />
-                <p className="text-zinc-500">No groups yet. Create departments or teams!</p>
+                  ))
+                )}
               </div>
             ) : (
-              filteredGroups.map(group => (
-                <div
-                  key={group.id}
-                  className="p-4 bg-zinc-900 rounded-xl border border-zinc-800 hover:border-zinc-700 transition-colors group"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center"
-                        style={{ backgroundColor: `${group.color}20` }}
-                      >
-                        <Building2 className="w-5 h-5" style={{ color: group.color }} />
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-white">{group.name}</h3>
-                        <p className="text-sm text-zinc-500">
-                          {getGroupMemberCount(group.id)} member{getGroupMemberCount(group.id) !== 1 ? 's' : ''}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => {
-                          setEditingGroup(group)
-                          setGroupForm({
-                            name: group.name,
-                            description: group.description || '',
-                            color: group.color,
-                          })
-                          setShowGroupModal(true)
-                        }}
-                        className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
-                      >
-                        <Edit2 className="w-4 h-4 text-zinc-400" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteGroup(group)}
-                        className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4 text-zinc-400 hover:text-red-400" />
-                      </button>
-                    </div>
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {filteredGroups.length === 0 ? (
+                  <div className="col-span-full text-center py-12 bg-zinc-900 rounded-xl border border-zinc-800">
+                    <Building2 className="w-12 h-12 text-zinc-700 mx-auto mb-3" />
+                    <p className="text-zinc-500">No groups yet. Create departments or teams!</p>
                   </div>
-                  {group.description && (
-                    <p className="text-sm text-zinc-500 line-clamp-2">{group.description}</p>
-                  )}
-                </div>
-              ))
+                ) : (
+                  filteredGroups.map(group => (
+                    <div
+                      key={group.id}
+                      className="p-4 bg-zinc-900 rounded-xl border border-zinc-800 hover:border-zinc-700 transition-colors group"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-10 h-10 rounded-lg flex items-center justify-center"
+                            style={{ backgroundColor: `${group.color}20` }}
+                          >
+                            <Building2 className="w-5 h-5" style={{ color: group.color }} />
+                          </div>
+                          <div>
+                            <h3 className="font-medium text-white">{group.name}</h3>
+                            <p className="text-sm text-zinc-500">
+                              {getGroupMemberCount(group.id)} member{getGroupMemberCount(group.id) !== 1 ? 's' : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => {
+                              setEditingGroup(group)
+                              setGroupForm({
+                                name: group.name,
+                                description: group.description || '',
+                                color: group.color,
+                              })
+                              setShowGroupModal(true)
+                            }}
+                            className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
+                          >
+                            <Edit2 className="w-4 h-4 text-zinc-400" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteGroup(group)}
+                            className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4 text-zinc-400 hover:text-red-400" />
+                          </button>
+                        </div>
+                      </div>
+                      {group.description && (
+                        <p className="text-sm text-zinc-500 line-clamp-2">{group.description}</p>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
             )}
           </div>
-        )}
+        </main>
       </div>
 
       {/* Group Modal */}

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Plus, Pencil, Trash2, X, Users, Sparkles, CheckCircle2, Clock, Pause, XCircle } from 'lucide-react'
 import Header from '@/components/Header'
+import Sidebar from '@/components/Sidebar'
 import PageTransition from '@/components/PageTransition'
 import CreateFromTemplateModal from '@/components/CreateFromTemplateModal'
 import { SuiteApps } from '@/components/SuiteApps'
@@ -139,124 +140,78 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 overflow-x-hidden">
+    <div className="min-h-screen bg-zinc-950 overflow-x-hidden flex flex-col">
       <Header />
 
-      <PageTransition>
-        <main className="max-w-7xl mx-auto px-4 py-8">
-          <h2 className="text-3xl font-bold text-white mb-6">Your Projects</h2>
+      <div className="flex flex-1">
+        <Sidebar />
+        
+        <PageTransition className="flex-1">
+          <main className="flex-1 px-4 md:px-8 py-8 overflow-x-hidden w-full">
+            <div className="max-w-5xl mx-auto">
+              <h2 className="text-3xl font-bold text-white mb-6">Your Projects</h2>
 
-          <div className="flex flex-col sm:flex-row gap-3 mb-8">
-            {/* Create Blank Project */}
-            <form onSubmit={createProject} className="flex gap-2 flex-1">
-              <input
-                type="text"
-                value={newProjectName}
-                onChange={(e) => setNewProjectName(e.target.value)}
-                placeholder="New project name..."
-                className="flex-1 px-4 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 text-white placeholder-zinc-500 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all"
-              />
-              <button
-                type="submit"
-                className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-2.5 rounded-lg hover:from-orange-600 hover:to-orange-700 flex items-center gap-2 whitespace-nowrap transition-all hover:scale-105 hover:shadow-lg hover:shadow-orange-500/25 font-medium"
-              >
-                <Plus className="w-5 h-5" />
-                Create
-              </button>
-            </form>
+              <div className="flex flex-col sm:flex-row gap-3 mb-8">
+                {/* Create Blank Project */}
+                <form onSubmit={createProject} className="flex gap-2 flex-1">
+                  <input
+                    type="text"
+                    value={newProjectName}
+                    onChange={(e) => setNewProjectName(e.target.value)}
+                    placeholder="New project name..."
+                    className="flex-1 px-4 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 text-white placeholder-zinc-500 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all"
+                  />
+                  <button
+                    type="submit"
+                    className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-2.5 rounded-lg hover:from-orange-600 hover:to-orange-700 flex items-center gap-2 whitespace-nowrap transition-all hover:scale-105 hover:shadow-lg hover:shadow-orange-500/25 font-medium"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Create
+                  </button>
+                </form>
 
-            {/* Create from Template */}
-            <button
-              onClick={() => setShowTemplateModal(true)}
-              className="bg-zinc-800 border border-zinc-700 text-white px-6 py-2.5 rounded-lg hover:bg-zinc-700 hover:border-orange-500/50 flex items-center gap-2 justify-center whitespace-nowrap transition-all hover:scale-105 font-medium group"
-            >
-              <Sparkles className="w-5 h-5 text-orange-400 group-hover:text-orange-300" />
-              Create from Template
-            </button>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projects.map((project, index) => (
-              <div
-                key={project.id}
-                className="bg-zinc-900 rounded-xl p-5 border border-zinc-800 hover:border-orange-500/50 transition-all duration-200 hover:shadow-xl hover:shadow-orange-500/10 hover:-translate-y-1 cursor-pointer group animate-fadeIn"
-                style={{ animationDelay: `${index * 50}ms` }}
-                onClick={() => router.push(`/project/${project.id}`)}
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="text-lg font-semibold text-white group-hover:text-orange-400 transition-colors flex-1 pr-2">
-                    {project.name}
-                  </h3>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        startEditing(project)
-                      }}
-                      className="text-zinc-400 hover:text-white p-1.5 rounded-lg hover:bg-zinc-800 transition-colors"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        deleteProject(project)
-                      }}
-                      className="text-zinc-400 hover:text-red-400 p-1.5 rounded-lg hover:bg-zinc-800 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-                {project.description && (
-                  <p className="text-zinc-500 text-sm mb-4 line-clamp-2">{project.description}</p>
-                )}
-                <div className="flex items-center justify-between">
-                  {getStatusBadge(project.status || 'active')}
-                </div>
+                {/* Create from Template */}
+                <button
+                  onClick={() => setShowTemplateModal(true)}
+                  className="bg-zinc-800 border border-zinc-700 text-white px-6 py-2.5 rounded-lg hover:bg-zinc-700 hover:border-orange-500/50 flex items-center gap-2 justify-center whitespace-nowrap transition-all hover:scale-105 font-medium group"
+                >
+                  <Sparkles className="w-5 h-5 text-orange-400 group-hover:text-orange-300" />
+                  Create from Template
+                </button>
               </div>
-            ))}
-          </div>
-
-          {projects.length === 0 && (
-            <div className="text-center py-16 animate-fadeIn">
-              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center">
-                <span className="text-4xl">📋</span>
-              </div>
-              <p className="text-zinc-400 text-lg mb-2">
-                No projects yet
-              </p>
-              <p className="text-zinc-600 text-sm">
-                Create your first project above to get started!
-              </p>
-            </div>
-          )}
-
-          {/* Shared Projects Section */}
-          {sharedProjects.length > 0 && (
-            <>
-              <h2 className="text-2xl font-bold text-white mb-6 mt-12 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-purple-400" />
-                </div>
-                Shared With You
-              </h2>
 
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {sharedProjects.map((project, index) => (
+                {projects.map((project, index) => (
                   <div
                     key={project.id}
-                    className="bg-zinc-900 rounded-xl p-5 border border-purple-500/30 hover:border-purple-500/60 transition-all duration-200 hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-1 cursor-pointer group animate-fadeIn"
+                    className="bg-zinc-900 rounded-xl p-5 border border-zinc-800 hover:border-orange-500/50 transition-all duration-200 hover:shadow-xl hover:shadow-orange-500/10 hover:-translate-y-1 cursor-pointer group animate-fadeIn"
                     style={{ animationDelay: `${index * 50}ms` }}
                     onClick={() => router.push(`/project/${project.id}`)}
                   >
                     <div className="flex justify-between items-start mb-3">
-                      <h3 className="text-lg font-semibold text-white group-hover:text-purple-400 transition-colors flex-1 pr-2">
+                      <h3 className="text-lg font-semibold text-white group-hover:text-orange-400 transition-colors flex-1 pr-2">
                         {project.name}
                       </h3>
-                      <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-1 rounded-md font-medium border border-purple-500/30">
-                        Shared
-                      </span>
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            startEditing(project)
+                          }}
+                          className="text-zinc-400 hover:text-white p-1.5 rounded-lg hover:bg-zinc-800 transition-colors"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            deleteProject(project)
+                          }}
+                          className="text-zinc-400 hover:text-red-400 p-1.5 rounded-lg hover:bg-zinc-800 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                     {project.description && (
                       <p className="text-zinc-500 text-sm mb-4 line-clamp-2">{project.description}</p>
@@ -267,17 +222,69 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-            </>
-          )}
 
-          {/* Suite Apps - Cross-App Navigation */}
-          <div className="mt-16 max-w-4xl mx-auto">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-              <SuiteApps currentApp="change" />
+              {projects.length === 0 && (
+                <div className="text-center py-16 animate-fadeIn">
+                  <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center">
+                    <span className="text-4xl">📋</span>
+                  </div>
+                  <p className="text-zinc-400 text-lg mb-2">
+                    No projects yet
+                  </p>
+                  <p className="text-zinc-600 text-sm">
+                    Create your first project above to get started!
+                  </p>
+                </div>
+              )}
+
+              {/* Shared Projects Section */}
+              {sharedProjects.length > 0 && (
+                <>
+                  <h2 className="text-2xl font-bold text-white mb-6 mt-12 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+                      <Users className="w-5 h-5 text-purple-400" />
+                    </div>
+                    Shared With You
+                  </h2>
+
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {sharedProjects.map((project, index) => (
+                      <div
+                        key={project.id}
+                        className="bg-zinc-900 rounded-xl p-5 border border-purple-500/30 hover:border-purple-500/60 transition-all duration-200 hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-1 cursor-pointer group animate-fadeIn"
+                        style={{ animationDelay: `${index * 50}ms` }}
+                        onClick={() => router.push(`/project/${project.id}`)}
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <h3 className="text-lg font-semibold text-white group-hover:text-purple-400 transition-colors flex-1 pr-2">
+                            {project.name}
+                          </h3>
+                          <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-1 rounded-md font-medium border border-purple-500/30">
+                            Shared
+                          </span>
+                        </div>
+                        {project.description && (
+                          <p className="text-zinc-500 text-sm mb-4 line-clamp-2">{project.description}</p>
+                        )}
+                        <div className="flex items-center justify-between">
+                          {getStatusBadge(project.status || 'active')}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Suite Apps - Cross-App Navigation */}
+              <div className="mt-16 max-w-4xl mx-auto">
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                  <SuiteApps currentApp="change" />
+                </div>
+              </div>
             </div>
-          </div>
-        </main>
-      </PageTransition>
+          </main>
+        </PageTransition>
+      </div>
 
       {/* Edit Project Modal */}
       {editingProject && (
