@@ -30,7 +30,7 @@ export async function GET(request: Request) {
       project_notes,
       created_at,
       updated_at,
-      global_stakeholder:global_stakeholders!stakeholder_id (
+      global_stakeholders (
         id,
         name,
         email,
@@ -41,7 +41,7 @@ export async function GET(request: Request) {
         notes,
         avatar_url,
         group_id,
-        stakeholder_group:stakeholder_groups!group_id (
+        stakeholder_groups (
           id,
           name,
           color
@@ -57,46 +57,55 @@ export async function GET(request: Request) {
   }
 
   // Flatten the response to match existing frontend expectations
-  const flattenedData = data?.map(ps => ({
-    id: ps.id,
-    stakeholder_id: ps.stakeholder_id,
-    project_id: ps.project_id,
-    // Global info
-    name: ps.global_stakeholder?.name || '',
-    email: ps.global_stakeholder?.email || '',
-    phone: ps.global_stakeholder?.phone || '',
-    role: ps.global_stakeholder?.role || '',
-    title: ps.global_stakeholder?.title || '',
-    department: ps.global_stakeholder?.department || '',
-    notes: ps.global_stakeholder?.notes || '',
-    avatar_url: ps.global_stakeholder?.avatar_url || '',
-    // Group info
-    group_id: ps.global_stakeholder?.group_id || null,
-    group_name: ps.global_stakeholder?.stakeholder_group?.name || null,
-    group_color: ps.global_stakeholder?.stakeholder_group?.color || null,
-    // Project-specific scores
-    stakeholder_type: ps.stakeholder_type,
-    influence_level: ps.influence_level,
-    support_level: ps.support_level,
-    engagement_score: ps.engagement_score,
-    last_contact_date: ps.last_contact_date,
-    project_notes: ps.project_notes,
-    comments: ps.project_notes, // Alias for backward compatibility
-    // ADKAR scores (project-specific)
-    awareness: ps.awareness,
-    desire: ps.desire,
-    knowledge: ps.knowledge,
-    ability: ps.ability,
-    reinforcement: ps.reinforcement,
-    // Legacy aliases for backward compatibility
-    awareness_score: ps.awareness,
-    desire_score: ps.desire,
-    knowledge_score: ps.knowledge,
-    ability_score: ps.ability,
-    reinforcement_score: ps.reinforcement,
-    created_at: ps.created_at,
-    updated_at: ps.updated_at,
-  }))
+  const flattenedData = data?.map(ps => {
+    const gs = Array.isArray(ps.global_stakeholders) 
+      ? ps.global_stakeholders[0] 
+      : ps.global_stakeholders
+    const group = gs?.stakeholder_groups
+      ? (Array.isArray(gs.stakeholder_groups) ? gs.stakeholder_groups[0] : gs.stakeholder_groups)
+      : null
+
+    return {
+      id: ps.id,
+      stakeholder_id: ps.stakeholder_id,
+      project_id: ps.project_id,
+      // Global info
+      name: gs?.name || '',
+      email: gs?.email || '',
+      phone: gs?.phone || '',
+      role: gs?.role || '',
+      title: gs?.title || '',
+      department: gs?.department || '',
+      notes: gs?.notes || '',
+      avatar_url: gs?.avatar_url || '',
+      // Group info
+      group_id: gs?.group_id || null,
+      group_name: group?.name || null,
+      group_color: group?.color || null,
+      // Project-specific scores
+      stakeholder_type: ps.stakeholder_type,
+      influence_level: ps.influence_level,
+      support_level: ps.support_level,
+      engagement_score: ps.engagement_score,
+      last_contact_date: ps.last_contact_date,
+      project_notes: ps.project_notes,
+      comments: ps.project_notes, // Alias for backward compatibility
+      // ADKAR scores (project-specific)
+      awareness: ps.awareness,
+      desire: ps.desire,
+      knowledge: ps.knowledge,
+      ability: ps.ability,
+      reinforcement: ps.reinforcement,
+      // Legacy aliases for backward compatibility
+      awareness_score: ps.awareness,
+      desire_score: ps.desire,
+      knowledge_score: ps.knowledge,
+      ability_score: ps.ability,
+      reinforcement_score: ps.reinforcement,
+      created_at: ps.created_at,
+      updated_at: ps.updated_at,
+    }
+  })
 
   return NextResponse.json(flattenedData)
 }
@@ -170,27 +179,34 @@ export async function POST(request: Request) {
     .from('project_stakeholders')
     .select(`
       *,
-      global_stakeholder:global_stakeholders!stakeholder_id (
+      global_stakeholders (
         id, name, email, phone, role, title, department, notes, avatar_url, group_id,
-        stakeholder_group:stakeholder_groups!group_id (id, name, color)
+        stakeholder_groups (id, name, color)
       )
     `)
     .eq('id', projectStakeholder.id)
     .single()
 
   // Flatten for response
+  const gs = Array.isArray(fullRecord.global_stakeholders)
+    ? fullRecord.global_stakeholders[0]
+    : fullRecord.global_stakeholders
+  const group = gs?.stakeholder_groups
+    ? (Array.isArray(gs.stakeholder_groups) ? gs.stakeholder_groups[0] : gs.stakeholder_groups)
+    : null
+
   const response = {
     id: fullRecord.id,
     stakeholder_id: fullRecord.stakeholder_id,
     project_id: fullRecord.project_id,
-    name: fullRecord.global_stakeholder?.name || '',
-    email: fullRecord.global_stakeholder?.email || '',
-    phone: fullRecord.global_stakeholder?.phone || '',
-    role: fullRecord.global_stakeholder?.role || '',
-    department: fullRecord.global_stakeholder?.department || '',
-    group_id: fullRecord.global_stakeholder?.group_id || null,
-    group_name: fullRecord.global_stakeholder?.stakeholder_group?.name || null,
-    group_color: fullRecord.global_stakeholder?.stakeholder_group?.color || null,
+    name: gs?.name || '',
+    email: gs?.email || '',
+    phone: gs?.phone || '',
+    role: gs?.role || '',
+    department: gs?.department || '',
+    group_id: gs?.group_id || null,
+    group_name: group?.name || null,
+    group_color: group?.color || null,
     stakeholder_type: fullRecord.stakeholder_type,
     influence_level: fullRecord.influence_level,
     support_level: fullRecord.support_level,
@@ -312,26 +328,33 @@ export async function PATCH(request: Request) {
     .from('project_stakeholders')
     .select(`
       *,
-      global_stakeholder:global_stakeholders!stakeholder_id (
+      global_stakeholders (
         id, name, email, phone, role, title, department, notes, avatar_url, group_id,
-        stakeholder_group:stakeholder_groups!group_id (id, name, color)
+        stakeholder_groups (id, name, color)
       )
     `)
     .eq('id', id)
     .single()
 
+  const gs = Array.isArray(updated.global_stakeholders)
+    ? updated.global_stakeholders[0]
+    : updated.global_stakeholders
+  const group = gs?.stakeholder_groups
+    ? (Array.isArray(gs.stakeholder_groups) ? gs.stakeholder_groups[0] : gs.stakeholder_groups)
+    : null
+
   const response = {
     id: updated.id,
     stakeholder_id: updated.stakeholder_id,
     project_id: updated.project_id,
-    name: updated.global_stakeholder?.name || '',
-    email: updated.global_stakeholder?.email || '',
-    phone: updated.global_stakeholder?.phone || '',
-    role: updated.global_stakeholder?.role || '',
-    department: updated.global_stakeholder?.department || '',
-    group_id: updated.global_stakeholder?.group_id || null,
-    group_name: updated.global_stakeholder?.stakeholder_group?.name || null,
-    group_color: updated.global_stakeholder?.stakeholder_group?.color || null,
+    name: gs?.name || '',
+    email: gs?.email || '',
+    phone: gs?.phone || '',
+    role: gs?.role || '',
+    department: gs?.department || '',
+    group_id: gs?.group_id || null,
+    group_name: group?.name || null,
+    group_color: group?.color || null,
     stakeholder_type: updated.stakeholder_type,
     influence_level: updated.influence_level,
     support_level: updated.support_level,

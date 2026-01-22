@@ -30,7 +30,7 @@ export async function GET(request: Request) {
       group_id,
       created_at,
       updated_at,
-      stakeholder_group:stakeholder_groups!group_id (
+      stakeholder_groups (
         id,
         name,
         color
@@ -49,12 +49,17 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // Flatten group info
-  const flattened = data?.map(s => ({
-    ...s,
-    group_name: s.stakeholder_group?.name || null,
-    group_color: s.stakeholder_group?.color || null,
-  }))
+  // Flatten group info - handle both array and object cases
+  const flattened = data?.map(s => {
+    const group = Array.isArray(s.stakeholder_groups) 
+      ? s.stakeholder_groups[0] 
+      : s.stakeholder_groups
+    return {
+      ...s,
+      group_name: group?.name || null,
+      group_color: group?.color || null,
+    }
+  })
 
   return NextResponse.json(flattened)
 }
@@ -86,7 +91,7 @@ export async function POST(request: Request) {
     }])
     .select(`
       *,
-      stakeholder_group:stakeholder_groups!group_id (
+      stakeholder_groups (
         id,
         name,
         color
@@ -98,10 +103,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  const group = Array.isArray(data.stakeholder_groups) 
+    ? data.stakeholder_groups[0] 
+    : data.stakeholder_groups
+
   return NextResponse.json({
     ...data,
-    group_name: data.stakeholder_group?.name || null,
-    group_color: data.stakeholder_group?.color || null,
+    group_name: group?.name || null,
+    group_color: group?.color || null,
   })
 }
 
@@ -127,7 +136,7 @@ export async function PATCH(request: Request) {
     .eq('id', id)
     .select(`
       *,
-      stakeholder_group:stakeholder_groups!group_id (
+      stakeholder_groups (
         id,
         name,
         color
@@ -139,10 +148,14 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  const group = Array.isArray(data.stakeholder_groups) 
+    ? data.stakeholder_groups[0] 
+    : data.stakeholder_groups
+
   return NextResponse.json({
     ...data,
-    group_name: data.stakeholder_group?.name || null,
-    group_color: data.stakeholder_group?.color || null,
+    group_name: group?.name || null,
+    group_color: group?.color || null,
   })
 }
 

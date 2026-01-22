@@ -32,7 +32,7 @@ export async function GET(request: Request) {
         reinforcement,
         project_notes,
         created_at,
-        stakeholder_group:stakeholder_groups!group_id (
+        stakeholder_groups (
           id,
           name,
           description,
@@ -46,24 +46,29 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Flatten response
-    const flattened = data?.map(pg => ({
-      id: pg.id,
-      project_id: pg.project_id,
-      group_id: pg.group_id,
-      name: pg.stakeholder_group?.name || '',
-      description: pg.stakeholder_group?.description || '',
-      color: pg.stakeholder_group?.color || '#6b7280',
-      group_sentiment: pg.group_sentiment,
-      influence_level: pg.influence_level,
-      awareness: pg.awareness,
-      desire: pg.desire,
-      knowledge: pg.knowledge,
-      ability: pg.ability,
-      reinforcement: pg.reinforcement,
-      project_notes: pg.project_notes,
-      created_at: pg.created_at,
-    }))
+    // Flatten response - handle both array and object cases
+    const flattened = data?.map(pg => {
+      const group = Array.isArray(pg.stakeholder_groups)
+        ? pg.stakeholder_groups[0]
+        : pg.stakeholder_groups
+      return {
+        id: pg.id,
+        project_id: pg.project_id,
+        group_id: pg.group_id,
+        name: group?.name || '',
+        description: group?.description || '',
+        color: group?.color || '#6b7280',
+        group_sentiment: pg.group_sentiment,
+        influence_level: pg.influence_level,
+        awareness: pg.awareness,
+        desire: pg.desire,
+        knowledge: pg.knowledge,
+        ability: pg.ability,
+        reinforcement: pg.reinforcement,
+        project_notes: pg.project_notes,
+        created_at: pg.created_at,
+      }
+    })
 
     return NextResponse.json(flattened)
   }
