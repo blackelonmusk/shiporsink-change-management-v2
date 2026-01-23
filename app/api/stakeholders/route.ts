@@ -272,6 +272,7 @@ export async function PATCH(request: Request) {
   if (body.stakeholder_type !== undefined) projectUpdates.stakeholder_type = body.stakeholder_type
   if (body.influence_level !== undefined) projectUpdates.influence_level = body.influence_level
   if (body.support_level !== undefined) projectUpdates.support_level = body.support_level
+  if (body.engagement_score !== undefined) projectUpdates.engagement_score = body.engagement_score
   // Note: performance_score is auto-calculated from ADKAR scores, ignoring manual updates
   if (body.last_contact_date !== undefined) projectUpdates.last_contact_date = body.last_contact_date
   if (body.project_notes !== undefined) projectUpdates.project_notes = body.project_notes
