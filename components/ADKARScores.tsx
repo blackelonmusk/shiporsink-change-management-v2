@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { ChevronDown, ChevronUp, Lightbulb, Target, BookOpen, Wrench, RefreshCw, Sparkles, TrendingUp, TrendingDown } from 'lucide-react'
+import { useState } from 'react'
+import { ChevronDown, ChevronUp, Lightbulb, Target, BookOpen, Wrench, RefreshCw, Sparkles } from 'lucide-react'
 
 interface ADKARScoresProps {
   stakeholderId: string
@@ -91,27 +91,6 @@ export default function ADKARScores({
   onSave,
 }: ADKARScoresProps) {
   const [isExpanded, setIsExpanded] = useState(false)
-  const [previousPerformanceScore, setPreviousPerformanceScore] = useState<number | null>(null)
-  const [isLoadingHistory, setIsLoadingHistory] = useState(true)
-
-  // Fetch previous performance score from history
-  useEffect(() => {
-    const fetchPreviousScore = async () => {
-      try {
-        const response = await fetch(`/api/history?stakeholder_id=${stakeholderId}&limit=2`)
-        const data = await response.json()
-        if (Array.isArray(data) && data.length > 1) {
-          // Get the second-most recent record (previous saved state)
-          setPreviousPerformanceScore(data[1].performance_score)
-        }
-      } catch (error) {
-        console.error('Error fetching previous score:', error)
-      } finally {
-        setIsLoadingHistory(false)
-      }
-    }
-    fetchPreviousScore()
-  }, [stakeholderId])
 
   const scores: Record<string, number> = {
     awareness,
@@ -139,17 +118,6 @@ export default function ADKARScores({
   const bottleneck = getBottleneck()
   const averageScore = Math.round((awareness + desire + knowledge + ability + reinforcement) / 5)
 
-  // Calculate trend indicator
-  const getTrendIndicator = () => {
-    if (previousPerformanceScore === null) return null
-    const difference = averageScore - previousPerformanceScore
-    if (difference >= 5) return { arrow: '↑', color: 'text-emerald-400', label: `+${difference}` }
-    if (difference <= -5) return { arrow: '↓', color: 'text-red-400', label: `${difference}` }
-    return { arrow: '→', color: 'text-zinc-400', label: `±${Math.abs(difference)}` }
-  }
-
-  const trend = getTrendIndicator()
-
   return (
     <div className="mt-4 border-t border-zinc-800 pt-4">
       {/* Toggle Header */}
@@ -174,18 +142,7 @@ export default function ADKARScores({
             })}
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-zinc-400">
-              ADKAR Score: <span className="text-white font-medium">{averageScore}/100</span>
-            </span>
-            <span className="text-sm text-zinc-600">•</span>
-            <span className="text-sm text-zinc-400">
-              Performance: <span className="text-white font-medium">{averageScore}/100</span>
-            </span>
-            {trend && !isLoadingHistory && (
-              <span className={`text-xs font-medium ${trend.color} flex items-center gap-0.5`} title={previousPerformanceScore !== null ? `Previous: ${previousPerformanceScore}/100` : 'No previous data'}>
-                {trend.arrow}
-              </span>
-            )}
+            {/* header only shows ADKAR stage letters now; numeric score and trend are shown on the stakeholder card */}
           </div>
         </div>
         <div className="flex items-center gap-2">

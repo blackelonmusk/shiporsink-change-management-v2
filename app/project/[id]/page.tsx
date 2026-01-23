@@ -98,6 +98,9 @@ const getScoreGradient = (score: number) => {
   }
 }
 
+// Render trend arrow for a stakeholder based on previous performance
+// Render trend arrow for a stakeholder based on previous performance (defined inside component)
+
 export default function ProjectPage() {
   const params = useParams()
   const router = useRouter()
@@ -118,6 +121,8 @@ export default function ProjectPage() {
   const [selectedStakeholder, setSelectedStakeholder] = useState<Stakeholder | null>(null)
   const [historyData, setHistoryData] = useState<ScoreHistory[]>([])
   const [showTrends, setShowTrends] = useState(false)
+  const [previousPerformance, setPreviousPerformance] = useState<{ [key: string]: number | null }>({})
+  const [loadingPrevious, setLoadingPrevious] = useState(false)
   const [editingStakeholder, setEditingStakeholder] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editRole, setEditRole] = useState('')
@@ -197,6 +202,27 @@ export default function ProjectPage() {
         }
       })
       setEditingScores(scores)
+      // Fetch previous performance values for trend indicators
+      setLoadingPrevious(true)
+      try {
+        const prevMap: { [key: string]: number | null } = {}
+        await Promise.all(data.map(async (s: any) => {
+          try {
+            const res = await fetch(`/api/history?stakeholder_id=${s.id}&limit=2`)
+            if (res.ok) {
+              const h = await res.json()
+              prevMap[s.id] = Array.isArray(h) && h.length > 1 ? h[1].performance_score : null
+            } else {
+              prevMap[s.id] = null
+            }
+          } catch (e) {
+            prevMap[s.id] = null
+          }
+        }))
+        setPreviousPerformance(prevMap)
+      } finally {
+        setLoadingPrevious(false)
+      }
     }
     if (analyticsRes.ok) setAnalytics(await analyticsRes.json())
     if (teamRes.ok) setTeamMembers(await teamRes.json())
@@ -211,6 +237,17 @@ export default function ProjectPage() {
       setSelectedStakeholder(stakeholder)
       setShowTrends(true)
     }
+  }
+
+  // Render trend arrow for a stakeholder based on previous performance
+  const renderTrend = (stakeholderId: string) => {
+    const prev = previousPerformance[stakeholderId]
+    const current = editingScores[stakeholderId]?.performance ?? (stakeholders.find(s => s.id === stakeholderId)?.performance_score ?? 0)
+    if (prev === undefined || prev === null) return null
+    const diff = current - prev
+    if (diff >= 5) return <span className="text-emerald-400 text-xs font-medium" title={`Previous: ${prev}/100`}>↑</span>
+    if (diff <= -5) return <span className="text-red-400 text-xs font-medium" title={`Previous: ${prev}/100`}>↓</span>
+    return <span className="text-zinc-400 text-xs font-medium" title={`Previous: ${prev}/100`}>→</span>
   }
 
   const openProfile = async (s: Stakeholder) => {
@@ -912,8 +949,11 @@ export default function ProjectPage() {
 
                     <div>
                       <div className="flex justify-between text-sm mb-1.5">
-                        <span className="text-zinc-400">Performance (Auto-calculated)</span>
-                        <span className="text-white font-medium">{editingScores[s.id]?.performance || 0}/100</span>
+                        <span className="text-zinc-400" title="Average of Awareness, Desire, Knowledge, Ability, and Reinforcement scores">ADKAR Score</span>
+                        <span className="text-white font-medium flex items-center gap-2">
+                          {editingScores[s.id]?.performance || 0}/100
+                          {renderTrend(s.id)}
+                        </span>
                       </div>
                       <div className="h-2.5 bg-zinc-800 rounded-full overflow-hidden">
                         <div
