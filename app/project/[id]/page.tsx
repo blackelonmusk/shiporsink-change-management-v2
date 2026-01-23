@@ -763,8 +763,8 @@ export default function ProjectPage() {
             <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl hover:border-orange-500/30 transition-all group">
               <h3 className="text-sm font-medium text-zinc-400 mb-2">Risk Level</h3>
               <p className={`text-4xl font-bold ${(analytics?.riskAssessment || 0) >= 75 ? 'text-red-400' :
-                  (analytics?.riskAssessment || 0) >= 50 ? 'text-yellow-400' :
-                    'text-emerald-400'
+                (analytics?.riskAssessment || 0) >= 50 ? 'text-yellow-400' :
+                  'text-emerald-400'
                 }`}>
                 <AnimatedCounter value={analytics?.riskAssessment || 0} suffix="%" />
               </p>
@@ -905,29 +905,6 @@ export default function ProjectPage() {
                           max="100"
                           value={editingScores[s.id]?.engagement || 0}
                           onChange={(e) => handleScoreChange(s.id, 'engagement', parseInt(e.target.value))}
-                          className="w-full h-2 bg-transparent rounded-lg appearance-none cursor-pointer absolute top-0 opacity-0"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-sm mb-1.5">
-                        <span className="text-zinc-400">Performance</span>
-                        <span className="text-white font-medium">{editingScores[s.id]?.performance || 0}/100</span>
-                      </div>
-                      <div className="relative">
-                        <div className="h-2.5 bg-zinc-800 rounded-full overflow-hidden mb-1">
-                          <div
-                            className={`h-full bg-gradient-to-r ${getScoreGradient(editingScores[s.id]?.performance || 0)} rounded-full transition-all duration-500 ease-out`}
-                            style={{ width: `${editingScores[s.id]?.performance || 0}%` }}
-                          />
-                        </div>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          value={editingScores[s.id]?.performance || 0}
-                          onChange={(e) => handleScoreChange(s.id, 'performance', parseInt(e.target.value))}
                           className="w-full h-2 bg-transparent rounded-lg appearance-none cursor-pointer absolute top-0 opacity-0"
                         />
                       </div>

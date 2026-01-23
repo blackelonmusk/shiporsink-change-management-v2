@@ -272,23 +272,64 @@ export async function PATCH(request: Request) {
   if (body.stakeholder_type !== undefined) projectUpdates.stakeholder_type = body.stakeholder_type
   if (body.influence_level !== undefined) projectUpdates.influence_level = body.influence_level
   if (body.support_level !== undefined) projectUpdates.support_level = body.support_level
-  if (body.performance_score !== undefined) projectUpdates.performance_score = body.performance_score
+  // Note: performance_score is auto-calculated from ADKAR scores, ignoring manual updates
   if (body.last_contact_date !== undefined) projectUpdates.last_contact_date = body.last_contact_date
   if (body.project_notes !== undefined) projectUpdates.project_notes = body.project_notes
   if (body.comments !== undefined) projectUpdates.project_notes = body.comments // Alias
 
   // ADKAR scores (project-specific)
-  if (body.awareness !== undefined) projectUpdates.awareness = body.awareness
-  if (body.desire !== undefined) projectUpdates.desire = body.desire
-  if (body.knowledge !== undefined) projectUpdates.knowledge = body.knowledge
-  if (body.ability !== undefined) projectUpdates.ability = body.ability
-  if (body.reinforcement !== undefined) projectUpdates.reinforcement = body.reinforcement
+  let hasADKARUpdates = false
+  if (body.awareness !== undefined) {
+    projectUpdates.awareness = body.awareness
+    hasADKARUpdates = true
+  }
+  if (body.desire !== undefined) {
+    projectUpdates.desire = body.desire
+    hasADKARUpdates = true
+  }
+  if (body.knowledge !== undefined) {
+    projectUpdates.knowledge = body.knowledge
+    hasADKARUpdates = true
+  }
+  if (body.ability !== undefined) {
+    projectUpdates.ability = body.ability
+    hasADKARUpdates = true
+  }
+  if (body.reinforcement !== undefined) {
+    projectUpdates.reinforcement = body.reinforcement
+    hasADKARUpdates = true
+  }
   // Legacy aliases
-  if (body.awareness_score !== undefined) projectUpdates.awareness = body.awareness_score
-  if (body.desire_score !== undefined) projectUpdates.desire = body.desire_score
-  if (body.knowledge_score !== undefined) projectUpdates.knowledge = body.knowledge_score
-  if (body.ability_score !== undefined) projectUpdates.ability = body.ability_score
-  if (body.reinforcement_score !== undefined) projectUpdates.reinforcement = body.reinforcement_score
+  if (body.awareness_score !== undefined) {
+    projectUpdates.awareness = body.awareness_score
+    hasADKARUpdates = true
+  }
+  if (body.desire_score !== undefined) {
+    projectUpdates.desire = body.desire_score
+    hasADKARUpdates = true
+  }
+  if (body.knowledge_score !== undefined) {
+    projectUpdates.knowledge = body.knowledge_score
+    hasADKARUpdates = true
+  }
+  if (body.ability_score !== undefined) {
+    projectUpdates.ability = body.ability_score
+    hasADKARUpdates = true
+  }
+  if (body.reinforcement_score !== undefined) {
+    projectUpdates.reinforcement = body.reinforcement_score
+    hasADKARUpdates = true
+  }
+
+  // Auto-calculate performance_score from ADKAR averages if any ADKAR score was updated
+  if (hasADKARUpdates) {
+    const awareness = projectUpdates.awareness ?? current.awareness ?? 50
+    const desire = projectUpdates.desire ?? current.desire ?? 50
+    const knowledge = projectUpdates.knowledge ?? current.knowledge ?? 50
+    const ability = projectUpdates.ability ?? current.ability ?? 50
+    const reinforcement = projectUpdates.reinforcement ?? current.reinforcement ?? 50
+    projectUpdates.performance_score = Math.round((awareness + desire + knowledge + ability + reinforcement) / 5)
+  }
 
   // Update global stakeholder if needed
   if (Object.keys(globalUpdates).length > 0) {
@@ -318,12 +359,12 @@ export async function PATCH(request: Request) {
     }
   }
 
-  // Record score history if engagement changed
-  if (body.engagement_score !== undefined) {
+  // Record score history if engagement or ADKAR scores changed
+  if (body.engagement_score !== undefined || hasADKARUpdates) {
     await supabase.from('score_history').insert([{
       stakeholder_id: current.stakeholder_id,
-      engagement_score: body.engagement_score,
-      performance_score: body.performance_score ?? 0,
+      engagement_score: body.engagement_score ?? current.engagement_score ?? 0,
+      performance_score: projectUpdates.performance_score ?? current.performance_score ?? 0,
     }])
   }
 

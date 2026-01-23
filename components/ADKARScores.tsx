@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { ChevronDown, ChevronUp, Lightbulb, Target, BookOpen, Wrench, RefreshCw, Sparkles } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { ChevronDown, ChevronUp, Lightbulb, Target, BookOpen, Wrench, RefreshCw, Sparkles, TrendingUp, TrendingDown } from 'lucide-react'
 
 interface ADKARScoresProps {
   stakeholderId: string
@@ -16,51 +16,51 @@ interface ADKARScoresProps {
 }
 
 const ADKAR_STAGES = [
-  { 
-    key: 'awareness', 
-    label: 'Awareness', 
+  {
+    key: 'awareness',
+    label: 'Awareness',
     letter: 'A',
-    icon: Lightbulb, 
+    icon: Lightbulb,
     color: 'orange',
     question: 'Do they understand WHY the change is needed?',
     lowTip: 'Share the business case and impact on their role',
     highTip: 'They understand the why - move to building desire'
   },
-  { 
-    key: 'desire', 
-    label: 'Desire', 
+  {
+    key: 'desire',
+    label: 'Desire',
     letter: 'D',
-    icon: Target, 
+    icon: Target,
     color: 'pink',
     question: 'Do they WANT to support the change?',
     lowTip: 'Uncover personal motivations and address concerns',
     highTip: 'They want to change - ensure they have the knowledge'
   },
-  { 
-    key: 'knowledge', 
-    label: 'Knowledge', 
+  {
+    key: 'knowledge',
+    label: 'Knowledge',
     letter: 'K',
-    icon: BookOpen, 
+    icon: BookOpen,
     color: 'cyan',
     question: 'Do they know HOW to change?',
     lowTip: 'Provide training, documentation, and examples',
     highTip: 'They know how - focus on building practical ability'
   },
-  { 
-    key: 'ability', 
-    label: 'Ability', 
+  {
+    key: 'ability',
+    label: 'Ability',
     letter: 'A',
-    icon: Wrench, 
+    icon: Wrench,
     color: 'emerald',
     question: 'CAN they implement the change?',
     lowTip: 'Remove barriers, provide coaching and practice time',
     highTip: 'They can do it - reinforce the new behaviors'
   },
-  { 
-    key: 'reinforcement', 
-    label: 'Reinforcement', 
+  {
+    key: 'reinforcement',
+    label: 'Reinforcement',
     letter: 'R',
-    icon: RefreshCw, 
+    icon: RefreshCw,
     color: 'purple',
     question: 'Are they SUSTAINING the change?',
     lowTip: 'Celebrate wins, address backsliding, gather feedback',
@@ -91,6 +91,27 @@ export default function ADKARScores({
   onSave,
 }: ADKARScoresProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const [previousPerformanceScore, setPreviousPerformanceScore] = useState<number | null>(null)
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true)
+
+  // Fetch previous performance score from history
+  useEffect(() => {
+    const fetchPreviousScore = async () => {
+      try {
+        const response = await fetch(`/api/history?stakeholder_id=${stakeholderId}&limit=2`)
+        const data = await response.json()
+        if (Array.isArray(data) && data.length > 1) {
+          // Get the second-most recent record (previous saved state)
+          setPreviousPerformanceScore(data[1].performance_score)
+        }
+      } catch (error) {
+        console.error('Error fetching previous score:', error)
+      } finally {
+        setIsLoadingHistory(false)
+      }
+    }
+    fetchPreviousScore()
+  }, [stakeholderId])
 
   const scores: Record<string, number> = {
     awareness,
@@ -104,19 +125,30 @@ export default function ADKARScores({
   const getBottleneck = () => {
     let lowestStage = ADKAR_STAGES[0]
     let lowestScore = scores[lowestStage.key]
-    
+
     for (const stage of ADKAR_STAGES) {
       if (scores[stage.key] < lowestScore) {
         lowestScore = scores[stage.key]
         lowestStage = stage
       }
     }
-    
+
     return { stage: lowestStage, score: lowestScore }
   }
 
   const bottleneck = getBottleneck()
   const averageScore = Math.round((awareness + desire + knowledge + ability + reinforcement) / 5)
+
+  // Calculate trend indicator
+  const getTrendIndicator = () => {
+    if (previousPerformanceScore === null) return null
+    const difference = averageScore - previousPerformanceScore
+    if (difference >= 5) return { arrow: '↑', color: 'text-emerald-400', label: `+${difference}` }
+    if (difference <= -5) return { arrow: '↓', color: 'text-red-400', label: `${difference}` }
+    return { arrow: '→', color: 'text-zinc-400', label: `±${Math.abs(difference)}` }
+  }
+
+  const trend = getTrendIndicator()
 
   return (
     <div className="mt-4 border-t border-zinc-800 pt-4">
@@ -141,9 +173,20 @@ export default function ADKARScores({
               )
             })}
           </div>
-          <span className="text-sm text-zinc-400">
-            ADKAR Score: <span className="text-white font-medium">{averageScore}/100</span>
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-zinc-400">
+              ADKAR Score: <span className="text-white font-medium">{averageScore}/100</span>
+            </span>
+            <span className="text-sm text-zinc-600">•</span>
+            <span className="text-sm text-zinc-400">
+              Performance: <span className="text-white font-medium">{averageScore}/100</span>
+            </span>
+            {trend && !isLoadingHistory && (
+              <span className={`text-xs font-medium ${trend.color} flex items-center gap-0.5`} title={previousPerformanceScore !== null ? `Previous: ${previousPerformanceScore}/100` : 'No previous data'}>
+                {trend.arrow}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {!isExpanded && bottleneck.score < 50 && (
@@ -188,7 +231,7 @@ export default function ADKARScores({
               const isBottleneck = stage.key === bottleneck.stage.key && bottleneck.score < 60
 
               return (
-                <div 
+                <div
                   key={stage.key}
                   className={`p-3 rounded-lg bg-zinc-900/50 border ${isBottleneck ? colorClasses.border : 'border-zinc-800'} transition-all`}
                 >
@@ -206,9 +249,9 @@ export default function ADKARScores({
                     </div>
                     <span className={`text-sm font-bold ${colorClasses.text}`}>{score}/100</span>
                   </div>
-                  
+
                   <p className="text-xs text-zinc-500 mb-2">{stage.question}</p>
-                  
+
                   <div className="relative">
                     <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
                       <div
