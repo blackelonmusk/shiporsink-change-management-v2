@@ -909,6 +909,19 @@ export default function ProjectPage() {
                         />
                       </div>
                     </div>
+
+                    <div>
+                      <div className="flex justify-between text-sm mb-1.5">
+                        <span className="text-zinc-400">Performance (Auto-calculated)</span>
+                        <span className="text-white font-medium">{editingScores[s.id]?.performance || 0}/100</span>
+                      </div>
+                      <div className="h-2.5 bg-zinc-800 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full bg-gradient-to-r ${getScoreGradient(editingScores[s.id]?.performance || 0)} rounded-full transition-all duration-500 ease-out`}
+                          style={{ width: `${editingScores[s.id]?.performance || 0}%` }}
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   {/* ADKAR Scores Component */}
