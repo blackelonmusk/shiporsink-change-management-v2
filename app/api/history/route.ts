@@ -3,17 +3,17 @@ import { supabase } from '@/lib/supabase'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
-  const stakeholderId = searchParams.get('stakeholder_id') || searchParams.get('stakeholderId')
+  const projectStakeholderId = searchParams.get('stakeholder_id') || searchParams.get('projectStakeholderId')
   const limit = parseInt(searchParams.get('limit') || '100')
 
-  if (!stakeholderId) {
+  if (!projectStakeholderId) {
     return NextResponse.json({ error: 'stakeholder_id required' }, { status: 400 })
   }
 
   const { data, error } = await supabase
     .from('score_history')
     .select('*')
-    .eq('stakeholder_id', stakeholderId)
+    .eq('project_stakeholder_id', projectStakeholderId)
     .order('recorded_at', { ascending: false })
     .limit(limit)
 

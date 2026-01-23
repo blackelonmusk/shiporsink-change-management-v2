@@ -229,11 +229,19 @@ export async function POST(request: Request) {
   }
 
   // Record initial score history
-  await supabase.from('score_history').insert([{
-    stakeholder_id: globalStakeholderId,
+  const { error: historyError } = await supabase.from('score_history').insert([{
+    project_stakeholder_id: projectStakeholder.id,
     engagement_score: 0,
     performance_score: 0,
+    awareness: 50,
+    desire: 50,
+    knowledge: 50,
+    ability: 50,
+    reinforcement: 50,
   }])
+  if (historyError) {
+    console.error('Error recording initial score history:', historyError)
+  }
 
   return NextResponse.json(response)
 }
@@ -246,7 +254,7 @@ export async function PATCH(request: Request) {
   // Fetch current record to get stakeholder_id and ADKAR scores
   const { data: current } = await supabase
     .from('project_stakeholders')
-    .select('stakeholder_id, engagement_score, awareness, desire, knowledge, ability, reinforcement, performance_score')
+    .select('id, stakeholder_id, engagement_score, awareness, desire, knowledge, ability, reinforcement, performance_score')
     .eq('id', id)
     .single()
 
@@ -280,24 +288,24 @@ export async function PATCH(request: Request) {
 
   // ADKAR scores (project-specific)
   let hasADKARUpdates = false
-  if (body.awareness !== undefined) {
-    projectUpdates.awareness = body.awareness
+  if (body.awareness !== undefined || body.awareness_score !== undefined) {
+    projectUpdates.awareness = body.awareness ?? body.awareness_score
     hasADKARUpdates = true
   }
-  if (body.desire !== undefined) {
-    projectUpdates.desire = body.desire
+  if (body.desire !== undefined || body.desire_score !== undefined) {
+    projectUpdates.desire = body.desire ?? body.desire_score
     hasADKARUpdates = true
   }
-  if (body.knowledge !== undefined) {
-    projectUpdates.knowledge = body.knowledge
+  if (body.knowledge !== undefined || body.knowledge_score !== undefined) {
+    projectUpdates.knowledge = body.knowledge ?? body.knowledge_score
     hasADKARUpdates = true
   }
-  if (body.ability !== undefined) {
-    projectUpdates.ability = body.ability
+  if (body.ability !== undefined || body.ability_score !== undefined) {
+    projectUpdates.ability = body.ability ?? body.ability_score
     hasADKARUpdates = true
   }
-  if (body.reinforcement !== undefined) {
-    projectUpdates.reinforcement = body.reinforcement
+  if (body.reinforcement !== undefined || body.reinforcement_score !== undefined) {
+    projectUpdates.reinforcement = body.reinforcement ?? body.reinforcement_score
     hasADKARUpdates = true
   }
   // Legacy aliases
@@ -362,11 +370,20 @@ export async function PATCH(request: Request) {
 
   // Record score history if engagement or ADKAR scores changed
   if (body.engagement_score !== undefined || hasADKARUpdates) {
-    await supabase.from('score_history').insert([{
-      stakeholder_id: current.stakeholder_id,
+    // Insert into score_history using project_stakeholder ID as reference
+    const { error: historyError } = await supabase.from('score_history').insert([{
+      project_stakeholder_id: current.id,
       engagement_score: body.engagement_score ?? current.engagement_score ?? 0,
       performance_score: projectUpdates.performance_score ?? current.performance_score ?? 0,
+      awareness: projectUpdates.awareness ?? current.awareness ?? 0,
+      desire: projectUpdates.desire ?? current.desire ?? 0,
+      knowledge: projectUpdates.knowledge ?? current.knowledge ?? 0,
+      ability: projectUpdates.ability ?? current.ability ?? 0,
+      reinforcement: projectUpdates.reinforcement ?? current.reinforcement ?? 0,
     }])
+    if (historyError) {
+      console.error('Error recording score history:', historyError)
+    }
   }
 
   // Fetch and return updated record

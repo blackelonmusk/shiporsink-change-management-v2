@@ -230,14 +230,23 @@ export default function ProjectPage() {
   }
 
   const fetchHistory = async (stakeholder: Stakeholder) => {
-    const res = await fetch(`/api/history?stakeholder_id=${(stakeholder as any).stakeholder_id}`)
-    if (res.ok) {
-      const data = await res.json()
-      setHistoryData(data)
-      setSelectedStakeholder(stakeholder)
-      setShowTrends(true)
-    } else {
-      console.error('Failed to fetch history:', res.statusText)
+    try {
+      const projectStakeholderId = stakeholder.id
+      const res = await fetch(`/api/history?stakeholder_id=${projectStakeholderId}`)
+
+      if (res.ok) {
+        const data = await res.json()
+        setHistoryData(data || [])
+        setSelectedStakeholder(stakeholder)
+        setShowTrends(true)
+      } else {
+        const errorText = await res.text()
+        console.error('History fetch failed:', res.status, errorText)
+        toast.error('Failed to fetch history')
+      }
+    } catch (error) {
+      console.error('Error fetching history:', error)
+      toast.error('Error fetching history')
     }
   }
 
@@ -602,7 +611,7 @@ export default function ProjectPage() {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
-  const chartData = historyData.map(h => ({
+  const chartData = [...historyData].reverse().map(h => ({
     date: formatDate(h.recorded_at),
     engagement: h.engagement_score,
     performance: h.performance_score,
