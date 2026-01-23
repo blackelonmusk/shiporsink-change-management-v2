@@ -243,10 +243,10 @@ export async function PATCH(request: Request) {
   const body = await request.json()
   const { id } = body // This is the project_stakeholders.id
 
-  // Fetch current record to get stakeholder_id
+  // Fetch current record to get stakeholder_id and ADKAR scores
   const { data: current } = await supabase
     .from('project_stakeholders')
-    .select('stakeholder_id, engagement_score')
+    .select('stakeholder_id, engagement_score, awareness, desire, knowledge, ability, reinforcement, performance_score')
     .eq('id', id)
     .single()
 
