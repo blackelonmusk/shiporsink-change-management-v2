@@ -230,12 +230,14 @@ export default function ProjectPage() {
   }
 
   const fetchHistory = async (stakeholder: Stakeholder) => {
-    const res = await fetch(`/api/history?stakeholderId=${stakeholder.id}`)
+    const res = await fetch(`/api/history?stakeholder_id=${(stakeholder as any).stakeholder_id}`)
     if (res.ok) {
       const data = await res.json()
       setHistoryData(data)
       setSelectedStakeholder(stakeholder)
       setShowTrends(true)
+    } else {
+      console.error('Failed to fetch history:', res.statusText)
     }
   }
 
