@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 
 // GET - Fetch stakeholders for a project (joins global + project data)
 export async function GET(request: Request) {
@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   }
 
   // Join project_stakeholders with global_stakeholders to get full data
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('project_stakeholders')
     .select(`
       id,
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
   const { project_id, stakeholder_id, name, role, email, phone, department } = body
 
   // Get project owner for user_id
-  const { data: project } = await supabase
+  const { data: project } = await supabaseAdmin
     .from('change_projects')
     .select('user_id')
     .eq('id', project_id)
@@ -132,7 +132,7 @@ export async function POST(request: Request) {
 
   // If no existing stakeholder_id, create a new global stakeholder
   if (!globalStakeholderId) {
-    const { data: newGlobal, error: globalError } = await supabase
+    const { data: newGlobal, error: globalError } = await supabaseAdmin
       .from('global_stakeholders')
       .insert([{
         user_id: project.user_id,
@@ -153,7 +153,7 @@ export async function POST(request: Request) {
   }
 
   // Create the project_stakeholders link with default scores
-  const { data: projectStakeholder, error: linkError } = await supabase
+  const { data: projectStakeholder, error: linkError } = await supabaseAdmin
     .from('project_stakeholders')
     .insert([{
       project_id,
@@ -178,7 +178,7 @@ export async function POST(request: Request) {
   }
 
   // Fetch the full record to return
-  const { data: fullRecord } = await supabase
+  const { data: fullRecord } = await supabaseAdmin
     .from('project_stakeholders')
     .select(`
       *,
@@ -229,7 +229,7 @@ export async function POST(request: Request) {
   }
 
   // Record initial score history
-  const { error: historyError } = await supabase.from('score_history').insert([{
+  const { error: historyError } = await supabaseAdmin.from('score_history').insert([{
     project_stakeholder_id: projectStakeholder.id,
     engagement_score: 0,
     performance_score: 0,
@@ -252,7 +252,7 @@ export async function PATCH(request: Request) {
   const { id } = body // This is the project_stakeholders.id
 
   // Fetch current record to get stakeholder_id and ADKAR scores
-  const { data: current } = await supabase
+  const { data: current } = await supabaseAdmin
     .from('project_stakeholders')
     .select('id, stakeholder_id, engagement_score, awareness, desire, knowledge, ability, reinforcement, performance_score')
     .eq('id', id)
@@ -343,7 +343,7 @@ export async function PATCH(request: Request) {
   // Update global stakeholder if needed
   if (Object.keys(globalUpdates).length > 0) {
     globalUpdates.updated_at = new Date().toISOString()
-    const { error: globalError } = await supabase
+    const { error: globalError } = await supabaseAdmin
       .from('global_stakeholders')
       .update(globalUpdates)
       .eq('id', current.stakeholder_id)
@@ -357,7 +357,7 @@ export async function PATCH(request: Request) {
   // Update project stakeholder if needed
   if (Object.keys(projectUpdates).length > 0) {
     projectUpdates.updated_at = new Date().toISOString()
-    const { error: projectError } = await supabase
+    const { error: projectError } = await supabaseAdmin
       .from('project_stakeholders')
       .update(projectUpdates)
       .eq('id', id)
@@ -371,7 +371,7 @@ export async function PATCH(request: Request) {
   // Record score history if engagement or ADKAR scores changed
   if (body.engagement_score !== undefined || hasADKARUpdates) {
     // Insert into score_history using project_stakeholder ID as reference
-    const { error: historyError } = await supabase.from('score_history').insert([{
+    const { error: historyError } = await supabaseAdmin.from('score_history').insert([{
       project_stakeholder_id: current.id,
       engagement_score: body.engagement_score ?? current.engagement_score ?? 0,
       performance_score: projectUpdates.performance_score ?? current.performance_score ?? 0,
@@ -387,7 +387,7 @@ export async function PATCH(request: Request) {
   }
 
   // Fetch and return updated record
-  const { data: updated } = await supabase
+  const { data: updated } = await supabaseAdmin
     .from('project_stakeholders')
     .select(`
       *,
@@ -451,7 +451,7 @@ export async function DELETE(request: Request) {
   }
 
   // Delete from project_stakeholders (not from global_stakeholders)
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('project_stakeholders')
     .delete()
     .eq('id', id)

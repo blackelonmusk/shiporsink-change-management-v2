@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let query = supabase
+  let query = supabaseAdmin
     .from('global_stakeholders')
     .select(`
       id,
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('global_stakeholders')
     .insert([{
       user_id: user.id,
@@ -130,7 +130,7 @@ export async function PATCH(request: Request) {
   if (notes !== undefined) updates.notes = notes
   if (group_id !== undefined) updates.group_id = group_id
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('global_stakeholders')
     .update(updates)
     .eq('id', id)
@@ -169,7 +169,7 @@ export async function DELETE(request: Request) {
   }
 
   // Check if stakeholder is linked to any projects
-  const { data: links } = await supabase
+  const { data: links } = await supabaseAdmin
     .from('project_stakeholders')
     .select('id, project_id')
     .eq('stakeholder_id', id)
@@ -181,7 +181,7 @@ export async function DELETE(request: Request) {
     }, { status: 400 })
   }
 
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('global_stakeholders')
     .delete()
     .eq('id', id)

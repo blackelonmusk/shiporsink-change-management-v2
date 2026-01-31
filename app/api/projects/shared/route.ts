@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   }
 
   // Get project IDs where user is a member
-  const { data: memberships, error: memberError } = await supabase
+  const { data: memberships, error: memberError } = await supabaseAdmin
     .from('change_project_members')
     .select('project_id')
     .eq('invited_email', email)
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   const projectIds = memberships.map(m => m.project_id)
 
   // Get the actual projects
-  const { data: projects, error: projectError } = await supabase
+  const { data: projects, error: projectError } = await supabaseAdmin
     .from('change_projects')
     .select('*')
     .in('id', projectIds)

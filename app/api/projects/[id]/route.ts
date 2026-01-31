@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('change_projects')
     .select('*')
     .eq('id', params.id)
@@ -31,7 +31,7 @@ export async function PATCH(
   if (status !== undefined) updateData.status = status
   if (logo_url !== undefined) updateData.logo_url = logo_url
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('change_projects')
     .update(updateData)
     .eq('id', params.id)
@@ -49,7 +49,7 @@ export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('change_projects')
     .delete()
     .eq('id', params.id)

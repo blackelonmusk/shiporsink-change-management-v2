@@ -1,15 +1,16 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { supabaseAdmin } from '@/lib/supabase'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
 // POST - Create project from template
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabaseAuth = createRouteHandlerClient({ cookies })
 
     const {
       data: { session },
-    } = await supabase.auth.getSession()
+    } = await supabaseAuth.auth.getSession()
 
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch template
-    const { data: template, error: templateError } = await supabase
+    const { data: template, error: templateError } = await supabaseAdmin
       .from('templates')
       .select('*')
       .eq('category', templateCategory)
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
     console.log('Template found:', template.name)
 
     // Create project
-    const { data: project, error: projectError } = await supabase
+    const { data: project, error: projectError } = await supabaseAdmin
       .from('change_projects')
       .insert({
         name: projectName,
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
     console.log('Project created:', project.id)
 
     // Fetch template stakeholders
-    const { data: templateStakeholders, error: stakeholdersError } = await supabase
+    const { data: templateStakeholders, error: stakeholdersError } = await supabaseAdmin
       .from('template_stakeholders')
       .select('*')
       .eq('template_id', template.id)
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
 
       console.log('Inserting stakeholders:', stakeholdersToInsert.length)
 
-      const { error: insertStakeholdersError } = await supabase
+      const { error: insertStakeholdersError } = await supabaseAdmin
         .from('stakeholders')
         .insert(stakeholdersToInsert)
 
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch template milestones
-    const { data: templateMilestones, error: milestonesError } = await supabase
+    const { data: templateMilestones, error: milestonesError } = await supabaseAdmin
       .from('template_milestones')
       .select('*')
       .eq('template_id', template.id)
@@ -132,7 +133,7 @@ export async function POST(request: NextRequest) {
 
       console.log('Inserting milestones:', milestonesToInsert.length)
 
-      const { error: insertMilestonesError } = await supabase
+      const { error: insertMilestonesError } = await supabaseAdmin
         .from('milestones')
         .insert(milestonesToInsert)
 

@@ -1,4 +1,5 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { supabaseAdmin } from '@/lib/supabase';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -8,18 +9,18 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabaseAuth = createRouteHandlerClient({ cookies });
 
     const {
       data: { session },
-    } = await supabase.auth.getSession();
+    } = await supabaseAuth.auth.getSession();
 
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Verify user has access to this project
-    const { data: project } = await supabase
+    const { data: project } = await supabaseAdmin
       .from('change_projects')
       .select('id')
       .eq('id', params.id)
@@ -31,7 +32,7 @@ export async function GET(
     }
 
     // Fetch milestones
-    const { data: milestones, error } = await supabase
+    const { data: milestones, error } = await supabaseAdmin
       .from('milestones')
       .select('*')
       .eq('project_id', params.id)
@@ -55,18 +56,18 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabaseAuth = createRouteHandlerClient({ cookies });
 
     const {
       data: { session },
-    } = await supabase.auth.getSession();
+    } = await supabaseAuth.auth.getSession();
 
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Verify user has access to this project
-    const { data: project } = await supabase
+    const { data: project } = await supabaseAdmin
       .from('change_projects')
       .select('id')
       .eq('id', params.id)
@@ -89,7 +90,7 @@ export async function POST(
     }
 
     // Create milestone
-    const { data: milestone, error } = await supabase
+    const { data: milestone, error } = await supabaseAdmin
       .from('milestones')
       .insert({
         project_id: params.id,
@@ -120,11 +121,11 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabaseAuth = createRouteHandlerClient({ cookies });
 
     const {
       data: { session },
-    } = await supabase.auth.getSession();
+    } = await supabaseAuth.auth.getSession();
 
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -141,7 +142,7 @@ export async function PATCH(
     }
 
     // Verify user has access to this milestone through the project
-    const { data: milestone } = await supabase
+    const { data: milestone } = await supabaseAdmin
       .from('milestones')
       .select('id, project_id')
       .eq('id', milestoneId)
@@ -151,7 +152,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Milestone not found' }, { status: 404 });
     }
 
-    const { data: project } = await supabase
+    const { data: project } = await supabaseAdmin
       .from('change_projects')
       .select('id')
       .eq('id', milestone.project_id)
@@ -163,7 +164,7 @@ export async function PATCH(
     }
 
     // Update milestone
-    const { data: updatedMilestone, error } = await supabase
+    const { data: updatedMilestone, error } = await supabaseAdmin
       .from('milestones')
       .update({
         ...updates,
@@ -191,11 +192,11 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabaseAuth = createRouteHandlerClient({ cookies });
 
     const {
       data: { session },
-    } = await supabase.auth.getSession();
+    } = await supabaseAuth.auth.getSession();
 
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -212,7 +213,7 @@ export async function DELETE(
     }
 
     // Verify user has access to this milestone through the project
-    const { data: milestone } = await supabase
+    const { data: milestone } = await supabaseAdmin
       .from('milestones')
       .select('id, project_id')
       .eq('id', milestoneId)
@@ -222,7 +223,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Milestone not found' }, { status: 404 });
     }
 
-    const { data: project } = await supabase
+    const { data: project } = await supabaseAdmin
       .from('change_projects')
       .select('id')
       .eq('id', milestone.project_id)
@@ -234,7 +235,7 @@ export async function DELETE(
     }
 
     // Delete milestone
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('milestones')
       .delete()
       .eq('id', milestoneId);

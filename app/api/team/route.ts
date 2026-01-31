@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'projectId required' }, { status: 400 })
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('change_project_members')
     .select('*')
     .eq('project_id', projectId)
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   const { project_id, invited_email } = body
 
   // Check if already invited
-  const { data: existing } = await supabase
+  const { data: existing } = await supabaseAdmin
     .from('change_project_members')
     .select('id')
     .eq('project_id', project_id)
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Already invited' }, { status: 400 })
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('change_project_members')
     .insert([
       {
@@ -64,7 +64,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'id required' }, { status: 400 })
   }
 
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('change_project_members')
     .delete()
     .eq('id', id)

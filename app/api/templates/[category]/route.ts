@@ -1,4 +1,5 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { supabaseAdmin } from '@/lib/supabase'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -8,18 +9,18 @@ export async function GET(
   { params }: { params: { category: string } }
 ) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabaseAuth = createRouteHandlerClient({ cookies })
 
     const {
       data: { session },
-    } = await supabase.auth.getSession()
+    } = await supabaseAuth.auth.getSession()
 
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Fetch template
-    const { data: template, error: templateError } = await supabase
+    const { data: template, error: templateError } = await supabaseAdmin
       .from('templates')
       .select('*')
       .eq('category', params.category)
@@ -28,7 +29,7 @@ export async function GET(
     if (templateError) throw templateError
 
     // Fetch template stakeholders
-    const { data: stakeholders, error: stakeholdersError } = await supabase
+    const { data: stakeholders, error: stakeholdersError } = await supabaseAdmin
       .from('template_stakeholders')
       .select('*')
       .eq('template_id', template.id)
@@ -37,7 +38,7 @@ export async function GET(
     if (stakeholdersError) throw stakeholdersError
 
     // Fetch template milestones
-    const { data: milestones, error: milestonesError } = await supabase
+    const { data: milestones, error: milestonesError } = await supabaseAdmin
       .from('template_milestones')
       .select('*')
       .eq('template_id', template.id)

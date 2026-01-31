@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 
   // If projectId provided, get groups that are linked to this project with their scores
   if (projectId) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('project_groups')
       .select(`
         id,
@@ -74,7 +74,7 @@ export async function GET(request: Request) {
   }
 
   // Otherwise, get all global groups for this user
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('stakeholder_groups')
     .select(`
       id,
@@ -108,7 +108,7 @@ export async function POST(request: Request) {
 
   // If group_id provided, just link existing group to project
   if (group_id && project_id) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('project_groups')
       .insert([{
         project_id,
@@ -132,7 +132,7 @@ export async function POST(request: Request) {
   }
 
   // Create new global group
-  const { data: newGroup, error: groupError } = await supabase
+  const { data: newGroup, error: groupError } = await supabaseAdmin
     .from('stakeholder_groups')
     .insert([{
       user_id: user.id,
@@ -149,7 +149,7 @@ export async function POST(request: Request) {
 
   // If project_id provided, also link to project
   if (project_id) {
-    await supabase
+    await supabaseAdmin
       .from('project_groups')
       .insert([{
         project_id,
@@ -187,7 +187,7 @@ export async function PATCH(request: Request) {
 
     projectUpdates.updated_at = new Date().toISOString()
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('project_groups')
       .update(projectUpdates)
       .eq('id', project_group_id)
@@ -210,7 +210,7 @@ export async function PATCH(request: Request) {
 
   globalUpdates.updated_at = new Date().toISOString()
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('stakeholder_groups')
     .update(globalUpdates)
     .eq('id', id)
@@ -232,7 +232,7 @@ export async function DELETE(request: Request) {
 
   // If projectGroupId, just unlink from project
   if (projectGroupId) {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('project_groups')
       .delete()
       .eq('id', projectGroupId)
@@ -249,7 +249,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'id required' }, { status: 400 })
   }
 
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('stakeholder_groups')
     .delete()
     .eq('id', id)

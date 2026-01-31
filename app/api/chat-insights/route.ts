@@ -1,21 +1,22 @@
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { supabaseAdmin } from '@/lib/supabase'
 import { cookies } from 'next/headers'
 
 // GET - Fetch chat insights for a user (optionally filtered by project or stakeholder)
 export async function GET(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies })
+  const supabaseAuth = createRouteHandlerClient({ cookies })
   const { searchParams } = new URL(request.url)
   const projectId = searchParams.get('projectId')
   const stakeholderId = searchParams.get('stakeholderId')
   const limit = parseInt(searchParams.get('limit') || '50')
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await supabaseAuth.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let query = supabase
+  let query = supabaseAdmin
     .from('chat_insights')
     .select('*')
     .eq('user_id', user.id)
@@ -42,16 +43,16 @@ export async function GET(request: Request) {
 
 // POST - Save a chat insight
 export async function POST(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies })
+  const supabaseAuth = createRouteHandlerClient({ cookies })
   const body = await request.json()
   const { project_id, stakeholder_id, insight, insight_type } = body
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await supabaseAuth.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('chat_insights')
     .insert([{
       user_id: user.id,
@@ -73,11 +74,11 @@ export async function POST(request: Request) {
 
 // DELETE - Delete a specific insight
 export async function DELETE(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies })
+  const supabaseAuth = createRouteHandlerClient({ cookies })
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await supabaseAuth.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -86,7 +87,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'id required' }, { status: 400 })
   }
 
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('chat_insights')
     .delete()
     .eq('id', id)

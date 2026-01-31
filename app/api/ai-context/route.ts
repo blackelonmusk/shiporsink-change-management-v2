@@ -1,26 +1,27 @@
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { supabaseAdmin } from '@/lib/supabase'
 import { cookies } from 'next/headers'
 
 export async function GET() {
-  const supabase = createRouteHandlerClient({ cookies })
+  const supabaseAuth = createRouteHandlerClient({ cookies })
 
   // Get current user
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await supabaseAuth.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
     // Fetch all projects for this user
-    const { data: projects } = await supabase
+    const { data: projects } = await supabaseAdmin
       .from('change_projects')
       .select('id, name, status, description, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
     // Fetch all global stakeholders with their groups
-    const { data: globalStakeholders } = await supabase
+    const { data: globalStakeholders } = await supabaseAdmin
       .from('global_stakeholders')
       .select(`
         id,
@@ -40,13 +41,13 @@ export async function GET() {
       .eq('user_id', user.id)
 
     // Fetch all groups
-    const { data: groups } = await supabase
+    const { data: groups } = await supabaseAdmin
       .from('stakeholder_groups')
       .select('id, name, description, color')
       .eq('user_id', user.id)
 
     // Fetch all project_stakeholders with scores (cross-project history)
-    const { data: projectStakeholders } = await supabase
+    const { data: projectStakeholders } = await supabaseAdmin
       .from('project_stakeholders')
       .select(`
         id,
@@ -66,7 +67,7 @@ export async function GET() {
       `)
 
     // Fetch project_groups (group-level scores per project)
-    const { data: projectGroups } = await supabase
+    const { data: projectGroups } = await supabaseAdmin
       .from('project_groups')
       .select(`
         id,
