@@ -1,12 +1,23 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { getAuthenticatedUser, verifyProjectOwnership } from '@/lib/auth'
 
 export async function GET(request: Request) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(request.url)
   const projectId = searchParams.get('projectId')
 
   if (!projectId) {
     return NextResponse.json({ error: 'projectId required' }, { status: 400 })
+  }
+
+  const hasAccess = await verifyProjectOwnership(user.id, projectId)
+  if (!hasAccess) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const { data: stakeholders, error } = await supabaseAdmin

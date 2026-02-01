@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { X, MessageCircle, Sparkles, RefreshCw, BookmarkPlus, Check, BookOpen } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { authFetch } from '@/lib/api'
 
 interface ConversationStartersModalProps {
   isOpen: boolean
@@ -235,7 +236,7 @@ export default function ConversationStartersModal({
     setSavingId(starter.id)
     
     try {
-      const res = await fetch('/api/scripts', {
+      const res = await authFetch('/api/scripts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

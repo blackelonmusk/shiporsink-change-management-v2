@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { X, Sparkles, Zap, MessageCircle, GraduationCap, AlertTriangle, Target, Calendar } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { authFetch } from '@/lib/api'
 
 interface AITaskModalProps {
   isOpen: boolean
@@ -85,7 +86,7 @@ export default function AITaskModal({
 
   const fetchBoards = async () => {
     try {
-      const response = await fetch('/api/generate-tasks')
+      const response = await authFetch('/api/generate-tasks')
       const data = await response.json()
       
       if (data.success && data.boards) {
@@ -104,7 +105,7 @@ export default function AITaskModal({
     setError(null)
 
     try {
-      const response = await fetch('/api/generate-tasks', {
+      const response = await authFetch('/api/generate-tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -143,7 +144,7 @@ export default function AITaskModal({
     setCreating(true)
 
     try {
-      const response = await fetch('/api/generate-tasks', {
+      const response = await authFetch('/api/generate-tasks', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

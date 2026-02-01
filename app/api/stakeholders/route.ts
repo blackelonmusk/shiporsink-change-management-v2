@@ -1,13 +1,24 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { getAuthenticatedUser, verifyProjectOwnership } from '@/lib/auth'
 
 // GET - Fetch stakeholders for a project (joins global + project data)
 export async function GET(request: Request) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(request.url)
   const projectId = searchParams.get('projectId')
 
   if (!projectId) {
     return NextResponse.json({ error: 'projectId required' }, { status: 400 })
+  }
+
+  const hasAccess = await verifyProjectOwnership(user.id, projectId)
+  if (!hasAccess) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   // Join project_stakeholders with global_stakeholders to get full data
@@ -114,18 +125,17 @@ export async function GET(request: Request) {
 
 // POST - Add a stakeholder to a project
 export async function POST(request: Request) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const body = await request.json()
   const { project_id, stakeholder_id, name, role, email, phone, department } = body
 
-  // Get project owner for user_id
-  const { data: project } = await supabaseAdmin
-    .from('change_projects')
-    .select('user_id')
-    .eq('id', project_id)
-    .single()
-
-  if (!project) {
-    return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+  const hasAccess = await verifyProjectOwnership(user.id, project_id)
+  if (!hasAccess) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   let globalStakeholderId = stakeholder_id
@@ -135,7 +145,7 @@ export async function POST(request: Request) {
     const { data: newGlobal, error: globalError } = await supabaseAdmin
       .from('global_stakeholders')
       .insert([{
-        user_id: project.user_id,
+        user_id: user.id,
         name,
         role,
         email: email || '',
@@ -248,18 +258,28 @@ export async function POST(request: Request) {
 
 // PATCH - Update stakeholder (handles both global and project-specific updates)
 export async function PATCH(request: Request) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const body = await request.json()
   const { id } = body // This is the project_stakeholders.id
 
   // Fetch current record to get stakeholder_id and ADKAR scores
   const { data: current } = await supabaseAdmin
     .from('project_stakeholders')
-    .select('id, stakeholder_id, engagement_score, awareness, desire, knowledge, ability, reinforcement, performance_score')
+    .select('id, project_id, stakeholder_id, engagement_score, awareness, desire, knowledge, ability, reinforcement, performance_score')
     .eq('id', id)
     .single()
 
   if (!current) {
     return NextResponse.json({ error: 'Stakeholder not found' }, { status: 404 })
+  }
+
+  const hasAccess = await verifyProjectOwnership(user.id, current.project_id)
+  if (!hasAccess) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   // Separate global updates from project updates
@@ -443,11 +463,32 @@ export async function PATCH(request: Request) {
 
 // DELETE - Remove stakeholder from project (doesn't delete global record)
 export async function DELETE(request: Request) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
 
   if (!id) {
     return NextResponse.json({ error: 'id required' }, { status: 400 })
+  }
+
+  // Verify ownership via the project_stakeholder's project
+  const { data: ps } = await supabaseAdmin
+    .from('project_stakeholders')
+    .select('project_id')
+    .eq('id', id)
+    .single()
+
+  if (!ps) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  const hasAccess = await verifyProjectOwnership(user.id, ps.project_id)
+  if (!hasAccess) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   // Delete from project_stakeholders (not from global_stakeholders)

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { X, Plus, Search, Users, UserPlus, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { authFetch } from '@/lib/api'
 
 interface GlobalStakeholder {
   id: string
@@ -53,7 +54,7 @@ export default function AddStakeholderModal({
   const fetchGlobalStakeholders = async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/global-stakeholders')
+      const res = await authFetch('/api/global-stakeholders')
       if (res.ok) {
         const data = await res.json()
         setGlobalStakeholders(data)
@@ -93,7 +94,7 @@ export default function AddStakeholderModal({
       // Add each selected stakeholder to the project
       await Promise.all(
         selectedIds.map(stakeholderId =>
-          fetch('/api/stakeholders', {
+          authFetch('/api/stakeholders', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -120,7 +121,7 @@ export default function AddStakeholderModal({
     setAdding(true)
 
     try {
-      await fetch('/api/stakeholders', {
+      await authFetch('/api/stakeholders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

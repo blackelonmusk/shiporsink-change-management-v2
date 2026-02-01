@@ -1,21 +1,15 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { supabaseAdmin } from '@/lib/supabase'
-import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { getAuthenticatedUser } from '@/lib/auth'
 
 // POST - Create project from template
 export async function POST(request: NextRequest) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
-    const supabaseAuth = createRouteHandlerClient({ cookies })
-
-    const {
-      data: { session },
-    } = await supabaseAuth.auth.getSession()
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const body = await request.json()
     const { templateCategory, projectName, startDate } = body
 
@@ -48,7 +42,7 @@ export async function POST(request: NextRequest) {
       .insert({
         name: projectName,
         description: template.guidance,
-        user_id: session.user.id,
+        user_id: user.id,
         status: 'active'
       })
       .select()

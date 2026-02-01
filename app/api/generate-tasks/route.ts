@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { getAuthenticatedUser, verifyProjectOwnership } from '@/lib/auth';
 import Anthropic from '@anthropic-ai/sdk';
 
 const anthropic = new Anthropic({
@@ -7,7 +8,12 @@ const anthropic = new Anthropic({
 });
 
 // GET - Fetch boards for dropdown
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const { data, error } = await supabaseAdmin
       .from('boards')
@@ -34,10 +40,15 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
-    const { 
+    const {
       projectId,
-      projectName, 
+      projectName,
       projectStatus,
       stakeholders,
       milestones,
@@ -50,6 +61,11 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Missing required fields' },
         { status: 400 }
       );
+    }
+
+    const hasAccess = await verifyProjectOwnership(user.id, projectId)
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Build stakeholder summary
@@ -161,15 +177,20 @@ Only respond with the JSON, no other text.`
 
 // Create selected tasks in Tick PM
 export async function PUT(request: NextRequest) {
-  try {
-    const { tasks, projectId, projectName, boardId, userId } = await request.json();
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
-    console.log('PUT /api/generate-tasks received:', { 
-      tasksCount: tasks?.length, 
-      projectId, 
-      projectName, 
-      boardId, 
-      userId 
+  try {
+    const { tasks, projectId, projectName, boardId } = await request.json();
+
+    console.log('PUT /api/generate-tasks received:', {
+      tasksCount: tasks?.length,
+      projectId,
+      projectName,
+      boardId,
+      userId: user.id
     });
 
     if (!tasks?.length || !boardId) {
@@ -203,8 +224,8 @@ export async function PUT(request: NextRequest) {
       };
       
       // Only add created_by if userId is provided
-      if (userId) {
-        taskData.created_by = userId;
+      if (user.id) {
+        taskData.created_by = user.id;
       }
       
       const { data, error } = await supabaseAdmin
@@ -232,8 +253,8 @@ export async function PUT(request: NextRequest) {
             target_id: data.id,
             target_title: task.title,
           };
-          if (userId) {
-            linkData.created_by = userId;
+          if (user.id) {
+            linkData.created_by = user.id;
           }
           await supabaseAdmin.from('suite_links').insert(linkData);
         }

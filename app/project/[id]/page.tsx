@@ -22,6 +22,7 @@ import AnimatedCounter from '@/components/AnimatedCounter'
 import PageTransition from '@/components/PageTransition'
 import { useMilestones } from '@/hooks/useMilestones'
 import type { Project, Stakeholder, ProjectAnalytics } from '@/lib/types'
+import { authFetch } from '@/lib/api'
 import type { User } from '@supabase/supabase-js'
 
 interface ScoreHistory {
@@ -179,10 +180,10 @@ export default function ProjectPage() {
 
   const fetchData = async () => {
     const [projectRes, stakeholdersRes, analyticsRes, teamRes] = await Promise.all([
-      fetch(`/api/projects/${projectId}`),
-      fetch(`/api/stakeholders?projectId=${projectId}`),
-      fetch(`/api/analytics?projectId=${projectId}`),
-      fetch(`/api/team?projectId=${projectId}`),
+      authFetch(`/api/projects/${projectId}`),
+      authFetch(`/api/stakeholders?projectId=${projectId}`),
+      authFetch(`/api/analytics?projectId=${projectId}`),
+      authFetch(`/api/team?projectId=${projectId}`),
     ])
 
     if (projectRes.ok) setProject(await projectRes.json())
@@ -208,7 +209,7 @@ export default function ProjectPage() {
         const prevMap: { [key: string]: number | null } = {}
         await Promise.all(data.map(async (s: any) => {
           try {
-            const res = await fetch(`/api/history?stakeholder_id=${s.id}&limit=2`)
+            const res = await authFetch(`/api/history?stakeholder_id=${s.id}&limit=2`)
             if (res.ok) {
               const h = await res.json()
               prevMap[s.id] = Array.isArray(h) && h.length > 1 ? h[1].performance_score : null
@@ -232,7 +233,7 @@ export default function ProjectPage() {
   const fetchHistory = async (stakeholder: Stakeholder) => {
     try {
       const projectStakeholderId = stakeholder.id
-      const res = await fetch(`/api/history?stakeholder_id=${projectStakeholderId}`)
+      const res = await authFetch(`/api/history?stakeholder_id=${projectStakeholderId}`)
 
       if (res.ok) {
         const data = await res.json()
@@ -276,7 +277,7 @@ export default function ProjectPage() {
 
     // Fetch followups for this stakeholder
     try {
-      const res = await fetch(`/api/followups?stakeholderId=${s.id}`)
+      const res = await authFetch(`/api/followups?stakeholderId=${s.id}`)
       if (res.ok) {
         const data = await res.json()
         setProfileFollowups(data.filter((f: any) => !f.completed))
@@ -291,7 +292,7 @@ export default function ProjectPage() {
     setAddingFollowup(true)
 
     try {
-      const res = await fetch('/api/followups', {
+      const res = await authFetch('/api/followups', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -318,7 +319,7 @@ export default function ProjectPage() {
   }
 
   const deleteFollowup = async (id: string) => {
-    await fetch(`/api/followups?id=${id}`, { method: 'DELETE' })
+    await authFetch(`/api/followups?id=${id}`, { method: 'DELETE' })
     setProfileFollowups(prev => prev.filter(f => f.id !== id))
     toast.success('Follow-up removed')
   }
@@ -341,7 +342,7 @@ export default function ProjectPage() {
   const saveProfile = async () => {
     if (!profileStakeholder) return
 
-    await fetch('/api/stakeholders', {
+    await authFetch('/api/stakeholders', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -378,7 +379,7 @@ export default function ProjectPage() {
     if (!inviteEmail.trim()) return
     setInviteLoading(true)
 
-    await fetch('/api/team', {
+    await authFetch('/api/team', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -388,7 +389,7 @@ export default function ProjectPage() {
     })
 
     try {
-      await fetch('/api/send-invite', {
+      await authFetch('/api/send-invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -411,7 +412,7 @@ export default function ProjectPage() {
   const removeTeamMember = async (memberId: string) => {
     if (!confirm('Remove this team member?')) return
 
-    await fetch(`/api/team?id=${memberId}`, {
+    await authFetch(`/api/team?id=${memberId}`, {
       method: 'DELETE',
     })
 
@@ -422,7 +423,7 @@ export default function ProjectPage() {
     e.preventDefault()
     if (!newStakeholderName.trim() || !newStakeholderRole.trim()) return
 
-    await fetch('/api/stakeholders', {
+    await authFetch('/api/stakeholders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -442,7 +443,7 @@ export default function ProjectPage() {
     const scores = editingScores[stakeholderId]
     if (!scores) return
 
-    await fetch('/api/stakeholders', {
+    await authFetch('/api/stakeholders', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -460,7 +461,7 @@ export default function ProjectPage() {
     const scores = editingScores[stakeholderId]
     if (!scores) return
 
-    await fetch('/api/stakeholders', {
+    await authFetch('/api/stakeholders', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -490,7 +491,7 @@ export default function ProjectPage() {
     // Save all updates in parallel
     await Promise.all(
       updates.map(update =>
-        fetch('/api/stakeholders', {
+        authFetch('/api/stakeholders', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(update),
@@ -503,7 +504,7 @@ export default function ProjectPage() {
   const deleteStakeholder = async (stakeholderId: string, name: string) => {
     if (!confirm(`Delete ${name}? This cannot be undone.`)) return
 
-    await fetch(`/api/stakeholders?id=${stakeholderId}`, {
+    await authFetch(`/api/stakeholders?id=${stakeholderId}`, {
       method: 'DELETE',
     })
 
@@ -519,7 +520,7 @@ export default function ProjectPage() {
   const saveProjectName = async () => {
     if (!projectNameEdit.trim()) return
 
-    await fetch(`/api/projects/${projectId}`, {
+    await authFetch(`/api/projects/${projectId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: projectNameEdit }),
@@ -559,7 +560,7 @@ export default function ProjectPage() {
         .from('logos')
         .getPublicUrl(fileName)
 
-      await fetch(`/api/projects/${projectId}`, {
+      await authFetch(`/api/projects/${projectId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ logo_url: publicUrl }),
@@ -576,7 +577,7 @@ export default function ProjectPage() {
   }
 
   const removeLogo = async () => {
-    await fetch(`/api/projects/${projectId}`, {
+    await authFetch(`/api/projects/${projectId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ logo_url: null }),

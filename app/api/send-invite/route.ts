@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server'
+import { getAuthenticatedUser } from '@/lib/auth'
 
 export async function POST(request: Request) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { to, inviterName, projectName, projectUrl } = await request.json()
 
   if (!to || !projectName) {

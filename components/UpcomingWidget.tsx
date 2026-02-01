@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Calendar, Check, User, ChevronRight, Undo2 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { authFetch } from '@/lib/api'
 
 interface Followup {
   id: string
@@ -43,7 +44,7 @@ export default function UpcomingWidget({ projectId, onViewAll, onRefresh }: Upco
 
   const fetchFollowups = async () => {
     try {
-      const res = await fetch(`/api/followups?projectId=${projectId}&upcoming=true`)
+      const res = await authFetch(`/api/followups?projectId=${projectId}&upcoming=true`)
       if (res.ok) {
         const data = await res.json()
         setFollowups(data)
@@ -59,7 +60,7 @@ export default function UpcomingWidget({ projectId, onViewAll, onRefresh }: Upco
     setFollowups(prev => prev.filter(f => f.id !== followup.id))
 
     // Mark as complete in database
-    await fetch('/api/followups', {
+    await authFetch('/api/followups', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: followup.id, completed: true }),
@@ -94,7 +95,7 @@ export default function UpcomingWidget({ projectId, onViewAll, onRefresh }: Upco
 
   const undoComplete = async (followup: Followup) => {
     // Restore in database
-    await fetch('/api/followups', {
+    await authFetch('/api/followups', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: followup.id, completed: false }),

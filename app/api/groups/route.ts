@@ -1,19 +1,16 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { getAuthenticatedUser } from '@/lib/auth'
 
 // GET - Fetch all groups for the current user
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const projectId = searchParams.get('projectId') // Optional: filter by project
-
-  const supabaseAuth = createRouteHandlerClient({ cookies })
-  const { data: { user } } = await supabaseAuth.auth.getUser()
-
-  if (!user) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const { searchParams } = new URL(request.url)
+  const projectId = searchParams.get('projectId') // Optional: filter by project
 
   // If projectId provided, get groups that are linked to this project with their scores
   if (projectId) {
@@ -96,15 +93,13 @@ export async function GET(request: Request) {
 
 // POST - Create a new group (optionally link to project)
 export async function POST(request: Request) {
-  const body = await request.json()
-  const { name, description, color, project_id, group_id } = body
-
-  const supabaseAuth = createRouteHandlerClient({ cookies })
-  const { data: { user } } = await supabaseAuth.auth.getUser()
-
-  if (!user) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const body = await request.json()
+  const { name, description, color, project_id, group_id } = body
 
   // If group_id provided, just link existing group to project
   if (group_id && project_id) {
@@ -169,6 +164,11 @@ export async function POST(request: Request) {
 
 // PATCH - Update group (global or project-specific)
 export async function PATCH(request: Request) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const body = await request.json()
   const { id, project_group_id } = body
 
@@ -214,6 +214,7 @@ export async function PATCH(request: Request) {
     .from('stakeholder_groups')
     .update(globalUpdates)
     .eq('id', id)
+    .eq('user_id', user.id)
     .select()
     .single()
 
@@ -226,6 +227,11 @@ export async function PATCH(request: Request) {
 
 // DELETE - Remove group (from project or globally)
 export async function DELETE(request: Request) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
   const projectGroupId = searchParams.get('projectGroupId')
@@ -253,6 +259,7 @@ export async function DELETE(request: Request) {
     .from('stakeholder_groups')
     .delete()
     .eq('id', id)
+    .eq('user_id', user.id)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })

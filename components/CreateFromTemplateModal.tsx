@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { X, Calendar, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { authFetch } from '@/lib/api'
 import TemplateGallery from './TemplateGallery'
 
 interface CreateFromTemplateModalProps {
@@ -33,7 +34,7 @@ export default function CreateFromTemplateModal({ isOpen, onClose }: CreateFromT
     setIsCreating(true)
 
     try {
-      const response = await fetch('/api/templates/apply', {
+      const response = await authFetch('/api/templates/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

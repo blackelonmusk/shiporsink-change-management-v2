@@ -1,19 +1,16 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { getAuthenticatedUser } from '@/lib/auth'
 
 // GET - Fetch all global stakeholders for the current user
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const groupId = searchParams.get('groupId') // Optional filter
-
-  const supabaseAuth = createRouteHandlerClient({ cookies })
-  const { data: { user } } = await supabaseAuth.auth.getUser()
-
-  if (!user) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const { searchParams } = new URL(request.url)
+  const groupId = searchParams.get('groupId') // Optional filter
 
   let query = supabaseAdmin
     .from('global_stakeholders')
@@ -66,15 +63,13 @@ export async function GET(request: Request) {
 
 // POST - Create a new global stakeholder
 export async function POST(request: Request) {
-  const body = await request.json()
-  const { name, email, phone, role, title, department, notes, group_id } = body
-
-  const supabaseAuth = createRouteHandlerClient({ cookies })
-  const { data: { user } } = await supabaseAuth.auth.getUser()
-
-  if (!user) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const body = await request.json()
+  const { name, email, phone, role, title, department, notes, group_id } = body
 
   const { data, error } = await supabaseAdmin
     .from('global_stakeholders')
@@ -116,6 +111,11 @@ export async function POST(request: Request) {
 
 // PATCH - Update a global stakeholder
 export async function PATCH(request: Request) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const body = await request.json()
   const { id, name, email, phone, role, title, department, notes, group_id } = body
 
@@ -134,6 +134,7 @@ export async function PATCH(request: Request) {
     .from('global_stakeholders')
     .update(updates)
     .eq('id', id)
+    .eq('user_id', user.id)
     .select(`
       *,
       stakeholder_groups (
@@ -148,8 +149,8 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  const group = Array.isArray(data.stakeholder_groups) 
-    ? data.stakeholder_groups[0] 
+  const group = Array.isArray(data.stakeholder_groups)
+    ? data.stakeholder_groups[0]
     : data.stakeholder_groups
 
   return NextResponse.json({
@@ -161,6 +162,11 @@ export async function PATCH(request: Request) {
 
 // DELETE - Delete a global stakeholder (will cascade to project_stakeholders)
 export async function DELETE(request: Request) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
 
@@ -185,6 +191,7 @@ export async function DELETE(request: Request) {
     .from('global_stakeholders')
     .delete()
     .eq('id', id)
+    .eq('user_id', user.id)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })

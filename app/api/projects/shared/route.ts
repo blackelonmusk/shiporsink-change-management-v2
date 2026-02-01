@@ -1,12 +1,16 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { getAuthenticatedUser } from '@/lib/auth'
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const email = searchParams.get('email')
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
+  const email = user.email
   if (!email) {
-    return NextResponse.json({ error: 'email required' }, { status: 400 })
+    return NextResponse.json({ error: 'No email on account' }, { status: 400 })
   }
 
   // Get project IDs where user is a member

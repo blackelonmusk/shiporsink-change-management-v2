@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import { authFetch } from '@/lib/api';
 
 interface Milestone {
   id: string;
@@ -37,7 +38,7 @@ export function useMilestones(projectId: string) {
   } = useQuery({
     queryKey: ['milestones', projectId],
     queryFn: async () => {
-      const response = await fetch(`/api/projects/${projectId}/milestones`);
+      const response = await authFetch(`/api/projects/${projectId}/milestones`);
       if (!response.ok) {
         throw new Error('Failed to fetch milestones');
       }
@@ -50,7 +51,7 @@ export function useMilestones(projectId: string) {
   // Create milestone
   const createMutation = useMutation({
     mutationFn: async (input: CreateMilestoneInput) => {
-      const response = await fetch(`/api/projects/${projectId}/milestones`, {
+      const response = await authFetch(`/api/projects/${projectId}/milestones`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
@@ -75,7 +76,7 @@ export function useMilestones(projectId: string) {
   // Update milestone
   const updateMutation = useMutation({
     mutationFn: async (input: UpdateMilestoneInput) => {
-      const response = await fetch(`/api/projects/${projectId}/milestones`, {
+      const response = await authFetch(`/api/projects/${projectId}/milestones`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
@@ -100,7 +101,7 @@ export function useMilestones(projectId: string) {
   // Delete milestone
   const deleteMutation = useMutation({
     mutationFn: async (milestoneId: string) => {
-      const response = await fetch(
+      const response = await authFetch(
         `/api/projects/${projectId}/milestones?milestoneId=${milestoneId}`,
         {
           method: 'DELETE',

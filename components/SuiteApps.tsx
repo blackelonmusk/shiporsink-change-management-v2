@@ -2,13 +2,35 @@
 
 import { BarChart3, Zap, FolderOpen } from 'lucide-react';
 
-type AppId = 'vault' | 'okr' | 'tick' | 'change';
+type AppId = 'hub' | 'vault' | 'okr' | 'tick' | 'change';
 
 interface SuiteAppsProps {
   currentApp: AppId;
 }
 
+function HubIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="url(#hub-gradient)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <defs>
+        <linearGradient id="hub-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#a855f7" />
+          <stop offset="50%" stopColor="#06b6d4" />
+          <stop offset="100%" stopColor="#10b981" />
+        </linearGradient>
+      </defs>
+      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+    </svg>
+  );
+}
+
 const suiteApps = [
+  {
+    id: 'hub' as AppId,
+    name: 'The Hub',
+    icon: HubIcon,
+    href: 'https://hub.shiporsink.ai',
+    color: undefined,
+  },
   {
     id: 'vault' as AppId,
     name: 'Vault',
@@ -53,7 +75,7 @@ export function SuiteApps({ currentApp }: SuiteAppsProps) {
               >
                 <Icon
                   className="w-4 h-4 transition-colors"
-                  style={{ color: app.color }}
+                  {...(app.color ? { style: { color: app.color } } : {})}
                 />
                 <span>{app.name}</span>
                 <svg

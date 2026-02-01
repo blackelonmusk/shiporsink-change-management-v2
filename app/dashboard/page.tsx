@@ -10,6 +10,7 @@ import PageTransition from '@/components/PageTransition'
 import CreateFromTemplateModal from '@/components/CreateFromTemplateModal'
 import { SuiteApps } from '@/components/SuiteApps'
 import type { Project } from '@/lib/types'
+import { authFetch } from '@/lib/api'
 import type { User } from '@supabase/supabase-js'
 
 const STATUS_OPTIONS = [
@@ -46,19 +47,19 @@ export default function Dashboard() {
     }
     setUser(user)
     setLoading(false)
-    fetchProjects(user.id, user.email || '')
+    fetchProjects()
   }
 
-  const fetchProjects = async (userId: string, email: string) => {
+  const fetchProjects = async () => {
     // Fetch owned projects
-    const ownedRes = await fetch(`/api/projects?userId=${userId}`)
+    const ownedRes = await authFetch(`/api/projects`)
     if (ownedRes.ok) {
       const data = await ownedRes.json()
       setProjects(data)
     }
 
     // Fetch shared projects
-    const sharedRes = await fetch(`/api/projects/shared?email=${email}`)
+    const sharedRes = await authFetch(`/api/projects/shared`)
     if (sharedRes.ok) {
       const data = await sharedRes.json()
       setSharedProjects(data)
@@ -69,17 +70,16 @@ export default function Dashboard() {
     e.preventDefault()
     if (!newProjectName.trim() || !user) return
 
-    await fetch('/api/projects', {
+    await authFetch('/api/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        name: newProjectName,
-        user_id: user.id 
+      body: JSON.stringify({
+        name: newProjectName
       }),
     })
 
     setNewProjectName('')
-    fetchProjects(user.id, user.email || '')
+    fetchProjects()
   }
 
   const startEditing = (project: Project) => {
@@ -92,10 +92,10 @@ export default function Dashboard() {
   const saveProject = async () => {
     if (!editingProject || !editName.trim() || !user) return
 
-    await fetch(`/api/projects/${editingProject.id}`, {
+    await authFetch(`/api/projects/${editingProject.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         name: editName,
         description: editDescription,
         status: editStatus
@@ -103,18 +103,18 @@ export default function Dashboard() {
     })
 
     setEditingProject(null)
-    fetchProjects(user.id, user.email || '')
+    fetchProjects()
   }
 
   const deleteProject = async (project: Project) => {
     if (!confirm(`Delete "${project.name}"? This will delete all stakeholders and cannot be undone.`)) return
     if (!user) return
 
-    await fetch(`/api/projects/${project.id}`, {
+    await authFetch(`/api/projects/${project.id}`, {
       method: 'DELETE',
     })
 
-    fetchProjects(user.id, user.email || '')
+    fetchProjects()
   }
 
   const getStatusBadge = (status: string) => {

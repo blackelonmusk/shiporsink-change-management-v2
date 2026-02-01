@@ -1,20 +1,18 @@
 import { NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { supabaseAdmin } from '@/lib/supabase'
-import { cookies } from 'next/headers'
+import { getAuthenticatedUser } from '@/lib/auth'
 
 // GET - Fetch chat insights for a user (optionally filtered by project or stakeholder)
 export async function GET(request: Request) {
-  const supabaseAuth = createRouteHandlerClient({ cookies })
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(request.url)
   const projectId = searchParams.get('projectId')
   const stakeholderId = searchParams.get('stakeholderId')
   const limit = parseInt(searchParams.get('limit') || '50')
-
-  const { data: { user } } = await supabaseAuth.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
 
   let query = supabaseAdmin
     .from('chat_insights')
@@ -43,14 +41,13 @@ export async function GET(request: Request) {
 
 // POST - Save a chat insight
 export async function POST(request: Request) {
-  const supabaseAuth = createRouteHandlerClient({ cookies })
-  const body = await request.json()
-  const { project_id, stakeholder_id, insight, insight_type } = body
-
-  const { data: { user } } = await supabaseAuth.auth.getUser()
-  if (!user) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const body = await request.json()
+  const { project_id, stakeholder_id, insight, insight_type } = body
 
   const { data, error } = await supabaseAdmin
     .from('chat_insights')
@@ -74,14 +71,13 @@ export async function POST(request: Request) {
 
 // DELETE - Delete a specific insight
 export async function DELETE(request: Request) {
-  const supabaseAuth = createRouteHandlerClient({ cookies })
-  const { searchParams } = new URL(request.url)
-  const id = searchParams.get('id')
-
-  const { data: { user } } = await supabaseAuth.auth.getUser()
-  if (!user) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
 
   if (!id) {
     return NextResponse.json({ error: 'id required' }, { status: 400 })

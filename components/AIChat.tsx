@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Sparkles, Send, X, Globe, Trash2, Brain } from 'lucide-react'
+import { authFetch } from '@/lib/api'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -132,7 +133,7 @@ export default function AIChat({ isOpen, onClose, projectId, projectContext }: A
   const loadChatHistory = async () => {
     setLoadingHistory(true)
     try {
-      const res = await fetch(`/api/chat-messages?projectId=${projectId}&limit=30`)
+      const res = await authFetch(`/api/chat-messages?projectId=${projectId}&limit=30`)
       if (res.ok) {
         const data = await res.json()
         const formattedMessages = data.map((m: any) => ({
@@ -149,7 +150,7 @@ export default function AIChat({ isOpen, onClose, projectId, projectContext }: A
 
   const loadInsights = async () => {
     try {
-      const res = await fetch(`/api/chat-insights?limit=20`)
+      const res = await authFetch(`/api/chat-insights?limit=20`)
       if (res.ok) {
         const data = await res.json()
         setInsights(data)
@@ -164,7 +165,7 @@ export default function AIChat({ isOpen, onClose, projectId, projectContext }: A
     
     setLoadingContext(true)
     try {
-      const res = await fetch('/api/ai-context')
+      const res = await authFetch('/api/ai-context')
       if (res.ok) {
         const data = await res.json()
         setCrossProjectContext(data)
@@ -177,7 +178,7 @@ export default function AIChat({ isOpen, onClose, projectId, projectContext }: A
 
   const saveMessage = async (role: 'user' | 'assistant', content: string) => {
     try {
-      await fetch('/api/chat-messages', {
+      await authFetch('/api/chat-messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -195,7 +196,7 @@ export default function AIChat({ isOpen, onClose, projectId, projectContext }: A
     if (!confirm('Clear all chat history for this project?')) return
     
     try {
-      await fetch(`/api/chat-messages?projectId=${projectId}`, {
+      await authFetch(`/api/chat-messages?projectId=${projectId}`, {
         method: 'DELETE',
       })
       setMessages([])
@@ -305,7 +306,7 @@ export default function AIChat({ isOpen, onClose, projectId, projectContext }: A
       // For now, we'll save a summary of the exchange
       const insight = `Discussed: ${userMessage.substring(0, 100)}...`
       
-      await fetch('/api/chat-insights', {
+      await authFetch('/api/chat-insights', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

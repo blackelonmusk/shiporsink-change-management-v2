@@ -1,19 +1,17 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { supabaseAdmin } from '@/lib/supabase'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { getAuthenticatedUser } from '@/lib/auth'
 
 export async function GET(request: Request) {
-  const supabaseAuth = createRouteHandlerClient({ cookies })
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(request.url)
   const projectId = searchParams.get('projectId')
   const stakeholderId = searchParams.get('stakeholderId')
   const upcoming = searchParams.get('upcoming')
-
-  const { data: { user } } = await supabaseAuth.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
 
   let query = supabaseAdmin
     .from('scheduled_followups')
@@ -51,13 +49,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const supabaseAuth = createRouteHandlerClient({ cookies })
-  const body = await request.json()
-
-  const { data: { user } } = await supabaseAuth.auth.getUser()
-  if (!user) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const body = await request.json()
 
   const { project_id, stakeholder_id, scheduled_date, title, notes } = body
 
@@ -85,13 +82,12 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const supabaseAuth = createRouteHandlerClient({ cookies })
-  const body = await request.json()
-
-  const { data: { user } } = await supabaseAuth.auth.getUser()
-  if (!user) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const body = await request.json()
 
   const { id, scheduled_date, title, notes, completed } = body
 
@@ -117,14 +113,13 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const supabaseAuth = createRouteHandlerClient({ cookies })
-  const { searchParams } = new URL(request.url)
-  const id = searchParams.get('id')
-
-  const { data: { user } } = await supabaseAuth.auth.getUser()
-  if (!user) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
 
   const { error } = await supabaseAdmin
     .from('scheduled_followups')

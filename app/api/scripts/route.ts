@@ -1,19 +1,17 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { supabaseAdmin } from '@/lib/supabase'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { getAuthenticatedUser } from '@/lib/auth'
 
 export async function GET(request: Request) {
-  const supabaseAuth = createRouteHandlerClient({ cookies })
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(request.url)
   const projectId = searchParams.get('projectId')
   const tag = searchParams.get('tag')
   const stakeholderType = searchParams.get('stakeholderType')
-
-  const { data: { user } } = await supabaseAuth.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
 
   let query = supabaseAdmin
     .from('conversation_scripts')
@@ -44,13 +42,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const supabaseAuth = createRouteHandlerClient({ cookies })
-  const body = await request.json()
-
-  const { data: { user } } = await supabaseAuth.auth.getUser()
-  if (!user) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const body = await request.json()
 
   const { project_id, title, content, tags, stakeholder_type } = body
 
@@ -75,13 +72,12 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const supabaseAuth = createRouteHandlerClient({ cookies })
-  const body = await request.json()
-
-  const { data: { user } } = await supabaseAuth.auth.getUser()
-  if (!user) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const body = await request.json()
 
   const { id, title, content, tags, stakeholder_type, increment_usage } = body
 
@@ -133,14 +129,13 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const supabaseAuth = createRouteHandlerClient({ cookies })
-  const { searchParams } = new URL(request.url)
-  const id = searchParams.get('id')
-
-  const { data: { user } } = await supabaseAuth.auth.getUser()
-  if (!user) {
+  const { user, error: authError } = await getAuthenticatedUser(request)
+  if (authError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
 
   const { error } = await supabaseAdmin
     .from('conversation_scripts')

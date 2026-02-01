@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { X, BookOpen, Plus, Copy, Check, Tag, Trash2, Search, Filter, Star, Clock } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { authFetch } from '@/lib/api'
 
 interface Script {
   id: string
@@ -70,7 +71,7 @@ export default function ScriptLibraryModal({ isOpen, onClose, projectId, onSelec
       if (filterTag) url += `&tag=${filterTag}`
       if (filterType) url += `&stakeholderType=${filterType}`
       
-      const res = await fetch(url)
+      const res = await authFetch(url)
       if (res.ok) {
         const data = await res.json()
         setScripts(data)
@@ -93,7 +94,7 @@ export default function ScriptLibraryModal({ isOpen, onClose, projectId, onSelec
     setTimeout(() => setCopiedId(null), 2000)
     
     // Increment usage
-    await fetch('/api/scripts', {
+    await authFetch('/api/scripts', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: script.id, increment_usage: true }),
@@ -114,7 +115,7 @@ export default function ScriptLibraryModal({ isOpen, onClose, projectId, onSelec
 
     setSaving(true)
     try {
-      const res = await fetch('/api/scripts', {
+      const res = await authFetch('/api/scripts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -144,7 +145,7 @@ export default function ScriptLibraryModal({ isOpen, onClose, projectId, onSelec
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this script?')) return
 
-    await fetch(`/api/scripts?id=${id}`, { method: 'DELETE' })
+    await authFetch(`/api/scripts?id=${id}`, { method: 'DELETE' })
     toast.success('Script deleted')
     fetchScripts()
   }

@@ -8,6 +8,7 @@ import {
   Check, X, Briefcase, Mail, Phone
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { authFetch } from '@/lib/api'
 import Header from '@/components/Header'
 import Sidebar from '@/components/Sidebar'
 
@@ -74,8 +75,8 @@ export default function PeoplePage() {
     setLoading(true)
     try {
       const [groupsRes, stakeholdersRes] = await Promise.all([
-        fetch('/api/groups'),
-        fetch('/api/global-stakeholders')
+        authFetch('/api/groups'),
+        authFetch('/api/global-stakeholders')
       ])
       
       if (groupsRes.ok) {
@@ -107,7 +108,7 @@ export default function PeoplePage() {
         ? { id: editingGroup.id, ...groupForm }
         : groupForm
 
-      const res = await fetch('/api/groups', {
+      const res = await authFetch('/api/groups', {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -132,7 +133,7 @@ export default function PeoplePage() {
     if (!confirm(`Delete "${group.name}"? People in this group will become ungrouped.`)) return
 
     try {
-      const res = await fetch(`/api/groups?id=${group.id}`, { method: 'DELETE' })
+      const res = await authFetch(`/api/groups?id=${group.id}`, { method: 'DELETE' })
       if (res.ok) {
         toast.success('Group deleted')
         fetchData()
@@ -157,7 +158,7 @@ export default function PeoplePage() {
         ? { id: editingPerson.id, ...personForm, group_id: personForm.group_id || null }
         : { ...personForm, group_id: personForm.group_id || null }
 
-      const res = await fetch('/api/global-stakeholders', {
+      const res = await authFetch('/api/global-stakeholders', {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -182,7 +183,7 @@ export default function PeoplePage() {
     if (!confirm(`Delete "${person.name}"? This will also remove them from all projects.`)) return
 
     try {
-      const res = await fetch(`/api/global-stakeholders?id=${person.id}`, { method: 'DELETE' })
+      const res = await authFetch(`/api/global-stakeholders?id=${person.id}`, { method: 'DELETE' })
       if (res.ok) {
         toast.success('Person deleted')
         fetchData()

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Download, TrendingUp, TrendingDown, Minus, Ship } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts'
+import { authFetch } from '@/lib/api'
 import type { Project, Stakeholder, ProjectAnalytics } from '@/lib/types'
 
 interface ScoreHistory {
@@ -41,9 +42,9 @@ export default function ReportPage() {
     setLoading(true)
     
     const [projectRes, stakeholdersRes, analyticsRes] = await Promise.all([
-      fetch(`/api/projects/${projectId}`),
-      fetch(`/api/stakeholders?projectId=${projectId}`),
-      fetch(`/api/analytics?projectId=${projectId}`),
+      authFetch(`/api/projects/${projectId}`),
+      authFetch(`/api/stakeholders?projectId=${projectId}`),
+      authFetch(`/api/analytics?projectId=${projectId}`),
     ])
 
     let projectData = null
@@ -61,7 +62,7 @@ export default function ReportPage() {
 
     // Fetch history for all stakeholders
     const historyPromises = stakeholdersData.map(s => 
-      fetch(`/api/history?stakeholderId=${s.id}`).then(r => r.json())
+      authFetch(`/api/history?stakeholderId=${s.id}`).then(r => r.json())
     )
     const histories = await Promise.all(historyPromises)
     
