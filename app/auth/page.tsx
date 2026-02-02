@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { Ship, Mail, Lock, User, ArrowRight } from 'lucide-react'
+import { Mail, Lock, User, ArrowRight } from 'lucide-react'
 
 export default function AuthPage() {
   const router = useRouter()
@@ -56,9 +56,7 @@ export default function AuthPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-xl mb-4">
-            <Ship className="w-10 h-10 text-white" />
-          </div>
+          <img src="/favicon.png" alt="Ship or Sink" className="w-16 h-16 rounded-xl mb-4 inline-block" />
           <h1 className="text-3xl font-bold text-white">Ship or Sink</h1>
           <p className="text-gray-400 mt-2">Change Management Assistant</p>
         </div>

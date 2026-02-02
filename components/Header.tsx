@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { Ship, LogOut } from 'lucide-react'
+import { LogOut } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 
 export default function Header() {
@@ -31,9 +31,7 @@ export default function Header() {
           className="flex items-center gap-3 cursor-pointer group"
           onClick={() => router.push('/dashboard')}
         >
-          <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center shadow-lg shadow-orange-500/20 group-hover:shadow-orange-500/40 transition-shadow">
-            <Ship className="w-6 h-6 text-white" />
-          </div>
+          <img src="/favicon.png" alt="Ship or Sink" className="w-8 h-8" />
           <div>
             <h1 className="text-xl font-bold text-white group-hover:text-orange-400 transition-colors">Ship or Sink</h1>
             <p className="text-xs text-zinc-500">AI Change Management Assistant</p>
