@@ -194,8 +194,8 @@ export default function ReportPage() {
               />
             </div>
           ) : (
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur rounded-2xl mb-8">
-              <Ship className="w-12 h-12 text-white" />
+            <div className="mb-8">
+              <img src="/change-logo.png" alt="Ship or Sink" className="w-20 h-20 mx-auto" />
             </div>
           )}
           {!(project as any).logo_url && (

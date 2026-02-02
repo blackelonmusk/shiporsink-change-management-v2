@@ -31,7 +31,7 @@ export default function Header() {
           className="flex items-center gap-3 cursor-pointer group"
           onClick={() => router.push('/dashboard')}
         >
-          <img src="/favicon.png" alt="Ship or Sink" className="w-8 h-8" />
+          <img src="/change-logo.png" alt="Ship or Sink" className="w-8 h-8" />
           <div>
             <h1 className="text-xl font-bold text-white group-hover:text-orange-400 transition-colors">Ship or Sink</h1>
             <p className="text-xs text-zinc-500">AI Change Management Assistant</p>

@@ -56,7 +56,7 @@ export default function AuthPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <img src="/favicon.png" alt="Ship or Sink" className="w-16 h-16 mb-4 inline-block" />
+          <img src="/change-logo.png" alt="Ship or Sink" className="w-16 h-16 mb-4 inline-block" />
           <h1 className="text-3xl font-bold text-white">Ship or Sink</h1>
           <p className="text-gray-400 mt-2">Change Management Assistant</p>
         </div>

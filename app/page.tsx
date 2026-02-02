@@ -15,7 +15,7 @@ export default function Home() {
         <header className="border-b border-zinc-800 backdrop-blur-sm bg-black/50">
           <div className="container mx-auto px-4 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src="/favicon.png" alt="Ship or Sink" className="w-10 h-10" />
+              <img src="/change-logo.png" alt="Ship or Sink" className="w-10 h-10" />
               <span className="text-xl font-bold">Ship or Sink</span>
             </div>
             <div className="flex items-center gap-4">
