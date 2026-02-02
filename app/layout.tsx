@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   description: 'Free AI-powered change management coaching. Track stakeholders, get ADKAR guidance, prepare for difficult conversations, and manage organizational change like a Prosci-certified pro.',
   manifest: '/manifest.json',
   icons: {
-    icon: '/icon-192.png',
+    icon: '/favicon.png',
     apple: '/icon-192.png',
   },
   metadataBase: new URL('https://change.shiporsink.ai'),
@@ -65,6 +65,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
+      <head>
+        <link rel="icon" type="image/png" href="/favicon.png" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+      </head>
       <body className="min-h-screen flex flex-col bg-gray-900 overflow-x-hidden w-full">
         <QueryProvider>
           <ThemeProvider>
