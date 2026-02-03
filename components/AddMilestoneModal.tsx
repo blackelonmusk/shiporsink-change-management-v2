@@ -10,6 +10,7 @@ interface Milestone {
   type: 'kickoff' | 'training' | 'golive' | 'review' | 'other';
   status: 'upcoming' | 'in_progress' | 'completed';
   description?: string;
+  meeting_notes?: string;
 }
 
 interface AddMilestoneModalProps {
@@ -39,6 +40,7 @@ export default function AddMilestoneModal({
     type: 'other',
     status: 'upcoming',
     description: '',
+    meeting_notes: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -51,6 +53,7 @@ export default function AddMilestoneModal({
         type: editingMilestone.type,
         status: editingMilestone.status,
         description: editingMilestone.description || '',
+        meeting_notes: editingMilestone.meeting_notes || '',
       });
     } else {
       setFormData({
@@ -59,6 +62,7 @@ export default function AddMilestoneModal({
         type: 'other',
         status: 'upcoming',
         description: '',
+        meeting_notes: '',
       });
     }
   }, [editingMilestone, isOpen]);
@@ -180,8 +184,25 @@ export default function AddMilestoneModal({
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Add any additional details about this milestone..."
-              rows={4}
+              rows={3}
               className="w-full px-4 py-3 border border-zinc-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-zinc-800 text-white resize-none placeholder-zinc-500"
+            />
+          </div>
+
+          {/* Meeting Notes */}
+          <div>
+            <label className="block text-sm font-medium text-zinc-300 mb-2">
+              Meeting Notes (Optional)
+            </label>
+            <p className="text-xs text-zinc-500 mb-2">
+              Paste meeting transcripts or summaries here for AI coaching insights
+            </p>
+            <textarea
+              value={formData.meeting_notes}
+              onChange={(e) => setFormData({ ...formData, meeting_notes: e.target.value })}
+              placeholder="Paste your meeting transcript, notes, or summary here..."
+              rows={6}
+              className="w-full px-4 py-3 border border-zinc-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-zinc-800 text-white resize-y placeholder-zinc-500 font-mono text-sm"
             />
           </div>
 
