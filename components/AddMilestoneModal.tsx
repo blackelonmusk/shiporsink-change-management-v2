@@ -81,15 +81,15 @@ export default function AddMilestoneModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-zinc-900 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-zinc-700">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <div className="flex items-center justify-between p-6 border-b border-zinc-700">
+          <h2 className="text-2xl font-bold text-white">
             {editingMilestone ? 'Edit Milestone' : 'Add Milestone'}
           </h2>
           <button
             onClick={onClose}
-            className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="p-2 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -99,7 +99,7 @@ export default function AddMilestoneModal({
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Milestone Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-zinc-300 mb-2">
               Milestone Name *
             </label>
             <input
@@ -108,13 +108,13 @@ export default function AddMilestoneModal({
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="e.g., Project Kickoff Meeting"
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              className="w-full px-4 py-3 border border-zinc-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-zinc-800 text-white placeholder-zinc-500"
             />
           </div>
 
           {/* Date */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-zinc-300 mb-2">
               Date *
             </label>
             <input
@@ -122,13 +122,13 @@ export default function AddMilestoneModal({
               required
               value={formData.date}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              className="w-full px-4 py-3 border border-zinc-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-zinc-800 text-white [color-scheme:dark]"
             />
           </div>
 
           {/* Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-zinc-300 mb-2">
               Milestone Type *
             </label>
             <div className="grid grid-cols-2 gap-3">
@@ -141,13 +141,13 @@ export default function AddMilestoneModal({
                     flex items-center gap-3 px-4 py-3 rounded-lg border-2 transition-all
                     ${
                       formData.type === type.value
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                        ? 'border-orange-500 bg-orange-500/10'
+                        : 'border-zinc-600 hover:border-zinc-500'
                     }
                   `}
                 >
                   <span className="text-2xl">{type.emoji}</span>
-                  <span className="font-medium text-gray-900 dark:text-white">
+                  <span className="font-medium text-white">
                     {type.label}
                   </span>
                 </button>
@@ -157,13 +157,13 @@ export default function AddMilestoneModal({
 
           {/* Status */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-zinc-300 mb-2">
               Status
             </label>
             <select
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value as Milestone['status'] })}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              className="w-full px-4 py-3 border border-zinc-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-zinc-800 text-white"
             >
               <option value="upcoming">Upcoming</option>
               <option value="in_progress">In Progress</option>
@@ -173,7 +173,7 @@ export default function AddMilestoneModal({
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-zinc-300 mb-2">
               Description (Optional)
             </label>
             <textarea
@@ -181,7 +181,7 @@ export default function AddMilestoneModal({
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Add any additional details about this milestone..."
               rows={4}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
+              className="w-full px-4 py-3 border border-zinc-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-zinc-800 text-white resize-none placeholder-zinc-500"
             />
           </div>
 
@@ -190,14 +190,14 @@ export default function AddMilestoneModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+              className="flex-1 px-6 py-3 border border-zinc-600 text-zinc-300 rounded-lg hover:bg-zinc-800 transition-colors font-medium"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors font-medium"
+              className="flex-1 px-6 py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 text-white rounded-lg transition-colors font-medium"
             >
               {isSubmitting ? 'Saving...' : editingMilestone ? 'Update Milestone' : 'Add Milestone'}
             </button>
