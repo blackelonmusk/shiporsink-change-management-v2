@@ -53,7 +53,7 @@ export async function POST(
     }
 
     const body = await request.json()
-    const { name, date, type, status, description } = body
+    const { name, date, type, status, description, meeting_notes } = body
 
     if (!name || !date || !type) {
       return NextResponse.json(
@@ -71,6 +71,7 @@ export async function POST(
         type,
         status: status || 'upcoming',
         description,
+        meeting_notes,
       })
       .select()
       .single()

@@ -28,6 +28,9 @@ export async function GET(request: Request) {
         department,
         notes,
         group_id,
+        org_level,
+        reports_to_id,
+        is_me,
         stakeholder_groups (
           id,
           name,
@@ -155,6 +158,9 @@ export async function GET(request: Request) {
         title: gs.title,
         department: gs.department,
         notes: gs.notes,
+        org_level: (gs as any).org_level || null,
+        reports_to_id: (gs as any).reports_to_id || null,
+        is_me: (gs as any).is_me || false,
         group: groupData ? {
           id: groupData.id,
           name: groupData.name,
@@ -162,6 +168,12 @@ export async function GET(request: Request) {
         } : null,
         projectHistory: stakeholderHistory[gs.id] || [],
       }
+    })
+
+    // Resolve reports_to names
+    const stakeholderNameMap = new Map(formattedStakeholders.map(s => [s.id, s.name]))
+    formattedStakeholders.forEach(s => {
+      (s as any).reports_to_name = s.reports_to_id ? stakeholderNameMap.get(s.reports_to_id) || null : null
     })
 
     // Format groups with history
@@ -175,6 +187,7 @@ export async function GET(request: Request) {
     }))
 
     // Build summary insights
+    const meProfile = formattedStakeholders.find(s => s.is_me) || null
     const insights = {
       totalProjects: projects?.length || 0,
       activeProjects: projects?.filter(p => p.status === 'active').length || 0,
@@ -183,6 +196,8 @@ export async function GET(request: Request) {
       // Find patterns
       resistantPatterns: findResistancePatterns(formattedStakeholders, formattedGroups),
       championPatterns: findChampionPatterns(formattedStakeholders),
+      orgHierarchyPatterns: findOrgHierarchyPatterns(formattedStakeholders),
+      meProfile,
     }
 
     return NextResponse.json({
@@ -221,6 +236,32 @@ function findResistancePatterns(stakeholders: any[], groups: any[]) {
       patterns.push(`${g.name} group has shown resistance in ${lowEngagement.length} projects`)
     }
   })
+
+  return patterns
+}
+
+// Helper: Find org hierarchy patterns for AI context
+function findOrgHierarchyPatterns(stakeholders: any[]) {
+  const patterns: string[] = []
+  const meProfile = stakeholders.find(s => s.is_me)
+
+  if (meProfile) {
+    const sameDept = stakeholders.filter(s =>
+      !s.is_me && s.department && s.department === meProfile.department
+    )
+    if (sameDept.length > 0) {
+      patterns.push(`${sameDept.length} stakeholder(s) in your department (${meProfile.department})`)
+    }
+
+    const directReports = stakeholders.filter(s => s.reports_to_id === meProfile.id)
+    if (directReports.length > 0) {
+      patterns.push(`Your direct reports: ${directReports.map((s: any) => s.name).join(', ')}`)
+    }
+
+    if ((meProfile as any).reports_to_name) {
+      patterns.push(`Your manager: ${(meProfile as any).reports_to_name}`)
+    }
+  }
 
   return patterns
 }

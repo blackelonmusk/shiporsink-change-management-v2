@@ -27,6 +27,10 @@ interface CrossProjectContext {
     id: string
     name: string
     role: string
+    department?: string
+    org_level?: string | null
+    reports_to_name?: string | null
+    is_me?: boolean
     group?: { id: string; name: string; color: string } | null
     projectHistory: Array<{
       projectName: string
@@ -67,6 +71,8 @@ interface CrossProjectContext {
     totalGroups: number
     resistantPatterns: string[]
     championPatterns: string[]
+    orgHierarchyPatterns?: string[]
+    meProfile?: any | null
   }
 }
 
@@ -89,6 +95,10 @@ interface AIChatProps {
       phone?: string
       stakeholder_type?: string
       notes?: string
+      department?: string
+      org_level?: string
+      reports_to_name?: string
+      is_me?: boolean
     }>
     milestones?: Array<{
       name: string
@@ -239,6 +249,10 @@ export default function AIChat({ isOpen, onClose, projectId, projectContext }: A
           globalStakeholders: crossProjectContext.stakeholders.map(s => ({
             name: s.name,
             role: s.role,
+            department: s.department || null,
+            org_level: s.org_level || null,
+            reports_to: s.reports_to_name || null,
+            is_me: s.is_me || false,
             group: s.group?.name || null,
             projectHistory: s.projectHistory.map(h => ({
               project: h.projectName,
@@ -259,7 +273,15 @@ export default function AIChat({ isOpen, onClose, projectId, projectContext }: A
           patterns: {
             resistant: crossProjectContext.insights.resistantPatterns,
             champions: crossProjectContext.insights.championPatterns,
+            orgHierarchy: crossProjectContext.insights.orgHierarchyPatterns || [],
           },
+          meProfile: crossProjectContext.insights.meProfile ? {
+            name: crossProjectContext.insights.meProfile.name,
+            role: crossProjectContext.insights.meProfile.role,
+            department: crossProjectContext.insights.meProfile.department,
+            org_level: crossProjectContext.insights.meProfile.org_level,
+            reports_to: crossProjectContext.insights.meProfile.reports_to_name,
+          } : null,
         } : null,
       }
 

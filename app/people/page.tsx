@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { 
-  Users, Building2, Plus, Search, Edit2, Trash2, 
+import {
+  Users, Building2, Plus, Search, Edit2, Trash2,
   UserPlus, FolderPlus,
-  Check, X, Briefcase, Mail, Phone
+  Check, X, Briefcase, Mail, Phone, MapPin
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { authFetch } from '@/lib/api'
@@ -28,12 +28,24 @@ interface Stakeholder {
   role: string
   title: string
   department: string
+  location: string
+  org_level: string | null
+  reports_to_id: string | null
+  is_me: boolean
   notes: string
   group_id: string | null
   group_name: string | null
   group_color: string | null
   created_at: string
 }
+
+const ORG_LEVELS = [
+  { value: '', label: 'Not set' },
+  { value: 'Executive', label: 'Executive' },
+  { value: 'Director', label: 'Director' },
+  { value: 'Manager', label: 'Manager' },
+  { value: 'Individual Contributor', label: 'Individual Contributor' },
+]
 
 const GROUP_COLORS = [
   { name: 'Gray', value: '#6b7280' },
@@ -63,8 +75,9 @@ export default function PeoplePage() {
   
   // Form states
   const [groupForm, setGroupForm] = useState({ name: '', description: '', color: '#6b7280' })
-  const [personForm, setPersonForm] = useState({ 
-    name: '', email: '', phone: '', role: '', title: '', department: '', notes: '', group_id: '' 
+  const [personForm, setPersonForm] = useState({
+    name: '', email: '', phone: '', role: '', title: '', department: '', location: '', notes: '', group_id: '',
+    org_level: '', reports_to_id: '', is_me: false,
   })
 
   useEffect(() => {
@@ -154,9 +167,9 @@ export default function PeoplePage() {
 
     try {
       const method = editingPerson ? 'PATCH' : 'POST'
-      const body = editingPerson 
-        ? { id: editingPerson.id, ...personForm, group_id: personForm.group_id || null }
-        : { ...personForm, group_id: personForm.group_id || null }
+      const body = editingPerson
+        ? { id: editingPerson.id, ...personForm, group_id: personForm.group_id || null, reports_to_id: personForm.reports_to_id || null }
+        : { ...personForm, group_id: personForm.group_id || null, reports_to_id: personForm.reports_to_id || null }
 
       const res = await authFetch('/api/global-stakeholders', {
         method,
@@ -168,7 +181,7 @@ export default function PeoplePage() {
         toast.success(editingPerson ? 'Person updated!' : 'Person added!')
         setShowPersonModal(false)
         setEditingPerson(null)
-        setPersonForm({ name: '', email: '', phone: '', role: '', title: '', department: '', notes: '', group_id: '' })
+        setPersonForm({ name: '', email: '', phone: '', role: '', title: '', department: '', location: '', notes: '', group_id: '', org_level: '', reports_to_id: '', is_me: false })
         fetchData()
       } else {
         const error = await res.json()
@@ -282,7 +295,7 @@ export default function PeoplePage() {
                   <button
                     onClick={() => {
                       setEditingPerson(null)
-                      setPersonForm({ name: '', email: '', phone: '', role: '', title: '', department: '', notes: '', group_id: '' })
+                      setPersonForm({ name: '', email: '', phone: '', role: '', title: '', department: '', location: '', notes: '', group_id: '', org_level: '', reports_to_id: '', is_me: false })
                       setShowPersonModal(true)
                     }}
                     className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
@@ -332,6 +345,14 @@ export default function PeoplePage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-medium text-white">{person.name}</span>
+                          {person.is_me && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400">
+                              You
+                            </span>
+                          )}
+                          {person.org_level && (
+                            <span className="text-xs text-zinc-500">{person.org_level}</span>
+                          )}
                           {person.group_name && (
                             <span 
                               className="text-xs px-2 py-0.5 rounded-full"
@@ -360,6 +381,12 @@ export default function PeoplePage() {
                               {person.phone}
                             </span>
                           )}
+                          {person.location && (
+                            <span className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              {person.location}
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -375,8 +402,12 @@ export default function PeoplePage() {
                               role: person.role || '',
                               title: person.title || '',
                               department: person.department || '',
+                              location: person.location || '',
                               notes: person.notes || '',
                               group_id: person.group_id || '',
+                              org_level: person.org_level || '',
+                              reports_to_id: person.reports_to_id || '',
+                              is_me: person.is_me || false,
                             })
                             setShowPersonModal(true)
                           }}
@@ -601,15 +632,71 @@ export default function PeoplePage() {
                   className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-orange-500"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1">Phone</label>
-                <input
-                  type="tel"
-                  value={personForm.phone}
-                  onChange={(e) => setPersonForm({ ...personForm, phone: e.target.value })}
-                  placeholder="Phone number"
-                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-orange-500"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-1">Phone</label>
+                  <input
+                    type="tel"
+                    value={personForm.phone}
+                    onChange={(e) => setPersonForm({ ...personForm, phone: e.target.value })}
+                    placeholder="Phone number"
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-1">Location</label>
+                  <input
+                    type="text"
+                    value={personForm.location}
+                    onChange={(e) => setPersonForm({ ...personForm, location: e.target.value })}
+                    placeholder="Office / City"
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-1">Org Level</label>
+                  <select
+                    value={personForm.org_level}
+                    onChange={(e) => setPersonForm({ ...personForm, org_level: e.target.value })}
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-orange-500"
+                  >
+                    {ORG_LEVELS.map(level => (
+                      <option key={level.value} value={level.value}>{level.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-1">Reports To</label>
+                  <select
+                    value={personForm.reports_to_id}
+                    onChange={(e) => setPersonForm({ ...personForm, reports_to_id: e.target.value })}
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-orange-500"
+                  >
+                    <option value="">None</option>
+                    {stakeholders
+                      .filter(s => s.id !== editingPerson?.id)
+                      .map(s => (
+                        <option key={s.id} value={s.id}>{s.name}{s.role ? ` (${s.role})` : ''}</option>
+                      ))
+                    }
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 py-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={personForm.is_me}
+                    onChange={(e) => setPersonForm({ ...personForm, is_me: e.target.checked })}
+                    className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-orange-500 accent-orange-500"
+                  />
+                  <span className="text-sm text-zinc-300">This is me</span>
+                </label>
+                {personForm.is_me && (
+                  <span className="text-xs text-orange-400">Auto-added to new projects</span>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-1">Notes</label>

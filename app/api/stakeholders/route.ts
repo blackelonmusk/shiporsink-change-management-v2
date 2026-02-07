@@ -53,6 +53,9 @@ export async function GET(request: Request) {
         notes,
         avatar_url,
         group_id,
+        org_level,
+        reports_to_id,
+        is_me,
         stakeholder_groups (
           id,
           name,
@@ -94,6 +97,10 @@ export async function GET(request: Request) {
       group_id: gs?.group_id || null,
       group_name: group?.name || null,
       group_color: group?.color || null,
+      // Org hierarchy
+      org_level: gs?.org_level || null,
+      reports_to_id: gs?.reports_to_id || null,
+      is_me: gs?.is_me || false,
       // Project-specific scores
       stakeholder_type: ps.stakeholder_type,
       influence_level: ps.influence_level,
@@ -193,7 +200,7 @@ export async function POST(request: Request) {
     .select(`
       *,
       global_stakeholders (
-        id, name, email, phone, role, title, department, notes, avatar_url, group_id,
+        id, name, email, phone, role, title, department, notes, avatar_url, group_id, org_level, reports_to_id, is_me,
         stakeholder_groups (id, name, color)
       )
     `)
@@ -220,6 +227,9 @@ export async function POST(request: Request) {
     group_id: gs?.group_id || null,
     group_name: group?.name || null,
     group_color: group?.color || null,
+    org_level: gs?.org_level || null,
+    reports_to_id: gs?.reports_to_id || null,
+    is_me: gs?.is_me || false,
     stakeholder_type: fullRecord.stakeholder_type,
     influence_level: fullRecord.influence_level,
     support_level: fullRecord.support_level,
@@ -295,6 +305,9 @@ export async function PATCH(request: Request) {
   if (body.department !== undefined) globalUpdates.department = body.department
   if (body.notes !== undefined) globalUpdates.notes = body.notes
   if (body.group_id !== undefined) globalUpdates.group_id = body.group_id
+  if (body.org_level !== undefined) globalUpdates.org_level = body.org_level
+  if (body.reports_to_id !== undefined) globalUpdates.reports_to_id = body.reports_to_id
+  if (body.is_me !== undefined) globalUpdates.is_me = body.is_me
 
   // Project-specific fields
   if (body.stakeholder_type !== undefined) projectUpdates.stakeholder_type = body.stakeholder_type
@@ -412,7 +425,7 @@ export async function PATCH(request: Request) {
     .select(`
       *,
       global_stakeholders (
-        id, name, email, phone, role, title, department, notes, avatar_url, group_id,
+        id, name, email, phone, role, title, department, notes, avatar_url, group_id, org_level, reports_to_id, is_me,
         stakeholder_groups (id, name, color)
       )
     `)
@@ -438,6 +451,9 @@ export async function PATCH(request: Request) {
     group_id: gs?.group_id || null,
     group_name: group?.name || null,
     group_color: group?.color || null,
+    org_level: gs?.org_level || null,
+    reports_to_id: gs?.reports_to_id || null,
+    is_me: gs?.is_me || false,
     stakeholder_type: updated.stakeholder_type,
     influence_level: updated.influence_level,
     support_level: updated.support_level,

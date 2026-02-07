@@ -13,6 +13,8 @@ interface GlobalStakeholder {
   department: string
   group_name: string | null
   group_color: string | null
+  org_level: string | null
+  is_me: boolean
 }
 
 interface AddStakeholderModalProps {
@@ -248,6 +250,11 @@ export default function AddStakeholderModal({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-white truncate">{s.name}</span>
+                            {s.is_me && (
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 font-medium shrink-0">
+                                You
+                              </span>
+                            )}
                             {s.group_name && (
                               <span
                                 className="text-xs px-2 py-0.5 rounded-full shrink-0"
@@ -261,7 +268,7 @@ export default function AddStakeholderModal({
                             )}
                           </div>
                           <p className="text-sm text-zinc-500 truncate">
-                            {s.role || 'No role'}{s.department ? ` • ${s.department}` : ''}
+                            {s.role || 'No role'}{s.department ? ` • ${s.department}` : ''}{s.org_level ? ` • ${s.org_level}` : ''}
                           </p>
                         </div>
 

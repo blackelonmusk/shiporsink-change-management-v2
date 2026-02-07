@@ -47,5 +47,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  // Auto-add "me" stakeholder to new project
+  try {
+    const { data: meStakeholder } = await supabaseAdmin
+      .from('global_stakeholders')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('is_me', true)
+      .single()
+
+    if (meStakeholder) {
+      await supabaseAdmin
+        .from('project_stakeholders')
+        .insert([{
+          project_id: data.id,
+          stakeholder_id: meStakeholder.id,
+          stakeholder_type: 'champion',
+          influence_level: 8,
+          support_level: 10,
+          awareness: 100,
+          desire: 100,
+          knowledge: 80,
+          ability: 80,
+          reinforcement: 50,
+          engagement_score: 0,
+          performance_score: 82,
+        }])
+    }
+  } catch (autoAddErr) {
+    console.error('Auto-add me stakeholder failed (non-fatal):', autoAddErr)
+  }
+
   return NextResponse.json(data)
 }

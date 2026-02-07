@@ -25,6 +25,9 @@ export async function GET(request: Request) {
       notes,
       avatar_url,
       group_id,
+      org_level,
+      reports_to_id,
+      is_me,
       created_at,
       updated_at,
       stakeholder_groups (
@@ -69,7 +72,16 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { name, email, phone, role, title, department, notes, group_id } = body
+  const { name, email, phone, role, title, department, notes, group_id, org_level, reports_to_id, is_me } = body
+
+  // Enforce only one is_me per user
+  if (is_me) {
+    await supabaseAdmin
+      .from('global_stakeholders')
+      .update({ is_me: false, updated_at: new Date().toISOString() })
+      .eq('user_id', user.id)
+      .eq('is_me', true)
+  }
 
   const { data, error } = await supabaseAdmin
     .from('global_stakeholders')
@@ -83,6 +95,9 @@ export async function POST(request: Request) {
       department: department || '',
       notes: notes || '',
       group_id: group_id || null,
+      org_level: org_level || null,
+      reports_to_id: reports_to_id || null,
+      is_me: is_me || false,
     }])
     .select(`
       *,
@@ -117,10 +132,20 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json()
-  const { id, name, email, phone, role, title, department, notes, group_id } = body
+  const { id, name, email, phone, role, title, department, notes, group_id, org_level, reports_to_id, is_me } = body
+
+  // Enforce only one is_me per user
+  if (is_me === true) {
+    await supabaseAdmin
+      .from('global_stakeholders')
+      .update({ is_me: false, updated_at: new Date().toISOString() })
+      .eq('user_id', user.id)
+      .eq('is_me', true)
+      .neq('id', id)
+  }
 
   const updates: any = { updated_at: new Date().toISOString() }
-  
+
   if (name !== undefined) updates.name = name
   if (email !== undefined) updates.email = email
   if (phone !== undefined) updates.phone = phone
@@ -129,6 +154,9 @@ export async function PATCH(request: Request) {
   if (department !== undefined) updates.department = department
   if (notes !== undefined) updates.notes = notes
   if (group_id !== undefined) updates.group_id = group_id
+  if (org_level !== undefined) updates.org_level = org_level
+  if (reports_to_id !== undefined) updates.reports_to_id = reports_to_id
+  if (is_me !== undefined) updates.is_me = is_me
 
   const { data, error } = await supabaseAdmin
     .from('global_stakeholders')
