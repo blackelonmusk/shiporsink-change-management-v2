@@ -50,6 +50,7 @@ export async function GET(request: Request) {
         role,
         title,
         department,
+        location,
         notes,
         avatar_url,
         group_id,
@@ -91,6 +92,7 @@ export async function GET(request: Request) {
       role: gs?.role || '',
       title: gs?.title || '',
       department: gs?.department || '',
+      location: gs?.location || '',
       notes: gs?.notes || '',
       avatar_url: gs?.avatar_url || '',
       // Group info
@@ -200,7 +202,7 @@ export async function POST(request: Request) {
     .select(`
       *,
       global_stakeholders (
-        id, name, email, phone, role, title, department, notes, avatar_url, group_id, org_level, reports_to_id, is_me,
+        id, name, email, phone, role, title, department, location, notes, avatar_url, group_id, org_level, reports_to_id, is_me,
         stakeholder_groups (id, name, color)
       )
     `)
@@ -425,7 +427,7 @@ export async function PATCH(request: Request) {
     .select(`
       *,
       global_stakeholders (
-        id, name, email, phone, role, title, department, notes, avatar_url, group_id, org_level, reports_to_id, is_me,
+        id, name, email, phone, role, title, department, location, notes, avatar_url, group_id, org_level, reports_to_id, is_me,
         stakeholder_groups (id, name, color)
       )
     `)

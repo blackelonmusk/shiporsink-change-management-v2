@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2, Pencil, Mail, Phone, User as UserIcon, MessageCircle, Users, UserPlus, Image, Upload, Briefcase, Zap, BookOpen, Calendar, CalendarPlus } from 'lucide-react'
+import { ArrowLeft, Plus, Sparkles, Save, TrendingUp, X, FileText, Trash2, Pencil, Mail, Phone, MapPin, User as UserIcon, MessageCircle, Users, UserPlus, Image, Upload, Briefcase, Zap, BookOpen, Calendar, CalendarPlus } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import toast from 'react-hot-toast'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
@@ -886,10 +886,11 @@ export default function ProjectPage() {
                           {getGroupBadge(s)}
                         </div>
                         <p className="text-sm text-zinc-400">{s.role}</p>
-                        {((s as any).email || (s as any).phone) && (
+                        {((s as any).email || (s as any).phone || (s as any).location) && (
                           <div className="flex gap-3 mt-1 text-xs text-zinc-500 flex-wrap">
                             {(s as any).email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {(s as any).email}</span>}
                             {(s as any).phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {(s as any).phone}</span>}
+                            {(s as any).location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {(s as any).location}</span>}
                           </div>
                         )}
                       </div>
