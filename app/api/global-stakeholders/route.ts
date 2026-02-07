@@ -22,6 +22,7 @@ export async function GET(request: Request) {
       role,
       title,
       department,
+      location,
       notes,
       avatar_url,
       group_id,
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { name, email, phone, role, title, department, notes, group_id, org_level, reports_to_id, is_me } = body
+  const { name, email, phone, role, title, department, location, notes, group_id, org_level, reports_to_id, is_me } = body
 
   // Enforce only one is_me per user
   if (is_me) {
@@ -93,6 +94,7 @@ export async function POST(request: Request) {
       role: role || '',
       title: title || '',
       department: department || '',
+      location: location || '',
       notes: notes || '',
       group_id: group_id || null,
       org_level: org_level || null,
@@ -132,7 +134,7 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json()
-  const { id, name, email, phone, role, title, department, notes, group_id, org_level, reports_to_id, is_me } = body
+  const { id, name, email, phone, role, title, department, location, notes, group_id, org_level, reports_to_id, is_me } = body
 
   // Enforce only one is_me per user
   if (is_me === true) {
@@ -152,6 +154,7 @@ export async function PATCH(request: Request) {
   if (role !== undefined) updates.role = role
   if (title !== undefined) updates.title = title
   if (department !== undefined) updates.department = department
+  if (location !== undefined) updates.location = location
   if (notes !== undefined) updates.notes = notes
   if (group_id !== undefined) updates.group_id = group_id
   if (org_level !== undefined) updates.org_level = org_level
