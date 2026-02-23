@@ -62,7 +62,7 @@ export default function ReportPage() {
 
     // Fetch history for all stakeholders
     const historyPromises = stakeholdersData.map(s => 
-      authFetch(`/api/history?stakeholderId=${s.id}`).then(r => r.json())
+      authFetch(`/api/history?stakeholder_id=${s.id}`).then(r => r.json())
     )
     const histories = await Promise.all(historyPromises)
     
