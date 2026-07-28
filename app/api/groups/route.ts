@@ -1,22 +1,86 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { getAuthenticatedUser } from '@/lib/auth'
+import { requireProjectAccess } from '@/lib/auth'
+import {
+  withAuth,
+  readJsonBody,
+  badRequest,
+  notFound,
+  unwrap,
+  unwrapRequired,
+} from '@/lib/api-utils'
+
+const DEFAULT_PROJECT_GROUP_SCORES = {
+  group_sentiment: 'neutral',
+  influence_level: 5,
+  awareness: 50,
+  desire: 50,
+  knowledge: 50,
+  ability: 50,
+  reinforcement: 50,
+}
+
+type GroupRef = {
+  id: string
+  name: string
+  description?: string
+  color: string
+} | null
+
+/** Supabase returns embedded rows as either an object or a single-item array. */
+function firstGroup(value: unknown): GroupRef {
+  if (Array.isArray(value)) return (value[0] as GroupRef) ?? null
+  return (value as GroupRef) ?? null
+}
+
+/** Confirm a project_groups row belongs to a project the user owns. */
+async function requireProjectGroupAccess(
+  userId: string,
+  projectGroupId: string
+) {
+  const projectGroup = unwrap<{ project_id: string }>(
+    'select project_groups for ownership check',
+    await supabaseAdmin
+      .from('project_groups')
+      .select('project_id')
+      .eq('id', projectGroupId)
+      .maybeSingle()
+  )
+
+  if (!projectGroup) throw notFound('Group link not found')
+
+  await requireProjectAccess(userId, projectGroup.project_id)
+}
+
+/** Confirm a stakeholder_groups row belongs to the user. */
+async function requireGroupOwnership(userId: string, groupId: string) {
+  const group = unwrap<{ id: string }>(
+    'select stakeholder_groups for ownership check',
+    await supabaseAdmin
+      .from('stakeholder_groups')
+      .select('id')
+      .eq('id', groupId)
+      .eq('user_id', userId)
+      .maybeSingle()
+  )
+
+  if (!group) throw notFound('Group not found')
+}
 
 // GET - Fetch all groups for the current user
-export async function GET(request: Request) {
-  const { user, error: authError } = await getAuthenticatedUser(request)
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+export const GET = withAuth('GET /api/groups', async ({ request, user }) => {
   const { searchParams } = new URL(request.url)
   const projectId = searchParams.get('projectId') // Optional: filter by project
 
-  // If projectId provided, get groups that are linked to this project with their scores
+  // Groups linked to a specific project, with their project-scoped scores.
   if (projectId) {
-    const { data, error } = await supabaseAdmin
-      .from('project_groups')
-      .select(`
+    await requireProjectAccess(user.id, projectId)
+
+    const projectGroups = unwrap<Record<string, any>[]>(
+      'select project_groups',
+      await supabaseAdmin
+        .from('project_groups')
+        .select(`
         id,
         project_id,
         group_id,
@@ -36,18 +100,12 @@ export async function GET(request: Request) {
           color
         )
       `)
-      .eq('project_id', projectId)
-      .order('created_at', { ascending: true })
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: true })
+    )
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    // Flatten response - handle both array and object cases
-    const flattened = data?.map(pg => {
-      const group = Array.isArray(pg.stakeholder_groups)
-        ? pg.stakeholder_groups[0]
-        : pg.stakeholder_groups
+    const flattened = (projectGroups ?? []).map((pg) => {
+      const group = firstGroup(pg.stakeholder_groups)
       return {
         id: pg.id,
         project_id: pg.project_id,
@@ -70,10 +128,12 @@ export async function GET(request: Request) {
     return NextResponse.json(flattened)
   }
 
-  // Otherwise, get all global groups for this user
-  const { data, error } = await supabaseAdmin
-    .from('stakeholder_groups')
-    .select(`
+  // Otherwise, all global groups for this user
+  const groups = unwrap(
+    'select stakeholder_groups',
+    await supabaseAdmin
+      .from('stakeholder_groups')
+      .select(`
       id,
       name,
       description,
@@ -81,101 +141,98 @@ export async function GET(request: Request) {
       created_at,
       updated_at
     `)
-    .eq('user_id', user.id)
-    .order('name', { ascending: true })
+      .eq('user_id', user.id)
+      .order('name', { ascending: true })
+  )
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json(data)
-}
+  return NextResponse.json(groups ?? [])
+})
 
 // POST - Create a new group (optionally link to project)
-export async function POST(request: Request) {
-  const { user, error: authError } = await getAuthenticatedUser(request)
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+export const POST = withAuth('POST /api/groups', async ({ request, user }) => {
+  const body = await readJsonBody<{
+    name?: string
+    description?: string
+    color?: string
+    project_id?: string
+    group_id?: string
+  }>(request)
 
-  const body = await request.json()
   const { name, description, color, project_id, group_id } = body
 
-  // If group_id provided, just link existing group to project
+  // Link an existing group to a project.
   if (group_id && project_id) {
-    const { data, error } = await supabaseAdmin
-      .from('project_groups')
+    await requireProjectAccess(user.id, project_id)
+    await requireGroupOwnership(user.id, group_id)
+
+    const link = unwrapRequired(
+      'insert project_groups',
+      await supabaseAdmin
+        .from('project_groups')
+        .insert([{
+          project_id,
+          group_id,
+          ...DEFAULT_PROJECT_GROUP_SCORES,
+        }])
+        .select()
+        .maybeSingle(),
+      'Group link was not created'
+    )
+
+    return NextResponse.json(link)
+  }
+
+  if (!name || !name.trim()) throw badRequest('name is required')
+
+  // Creating a new global group, optionally linked to a project.
+  if (project_id) {
+    await requireProjectAccess(user.id, project_id)
+  }
+
+  const newGroup = unwrapRequired<{ id: string }>(
+    'insert stakeholder_groups',
+    await supabaseAdmin
+      .from('stakeholder_groups')
       .insert([{
-        project_id,
-        group_id,
-        group_sentiment: 'neutral',
-        influence_level: 5,
-        awareness: 50,
-        desire: 50,
-        knowledge: 50,
-        ability: 50,
-        reinforcement: 50,
+        user_id: user.id,
+        name,
+        description: description || '',
+        color: color || '#6b7280',
       }])
       .select()
-      .single()
+      .maybeSingle(),
+    'Group was not created'
+  )
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json(data)
-  }
-
-  // Create new global group
-  const { data: newGroup, error: groupError } = await supabaseAdmin
-    .from('stakeholder_groups')
-    .insert([{
-      user_id: user.id,
-      name,
-      description: description || '',
-      color: color || '#6b7280',
-    }])
-    .select()
-    .single()
-
-  if (groupError) {
-    return NextResponse.json({ error: groupError.message }, { status: 500 })
-  }
-
-  // If project_id provided, also link to project
   if (project_id) {
-    await supabaseAdmin
+    const { error: linkError } = await supabaseAdmin
       .from('project_groups')
       .insert([{
         project_id,
         group_id: newGroup.id,
-        group_sentiment: 'neutral',
-        influence_level: 5,
-        awareness: 50,
-        desire: 50,
-        knowledge: 50,
-        ability: 50,
-        reinforcement: 50,
+        ...DEFAULT_PROJECT_GROUP_SCORES,
       }])
+
+    // The group itself exists; report the link failure without losing it.
+    if (linkError) {
+      console.error('[POST /api/groups] failed linking group to project:', linkError)
+    }
   }
 
   return NextResponse.json(newGroup)
-}
+})
 
 // PATCH - Update group (global or project-specific)
-export async function PATCH(request: Request) {
-  const { user, error: authError } = await getAuthenticatedUser(request)
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const body = await request.json()
+export const PATCH = withAuth('PATCH /api/groups', async ({ request, user }) => {
+  const body = await readJsonBody<Record<string, any>>(request)
   const { id, project_group_id } = body
 
-  // If project_group_id provided, update project-specific scores
+  // Project-scoped scores.
   if (project_group_id) {
-    const projectUpdates: any = {}
-    
+    await requireProjectGroupAccess(user.id, project_group_id)
+
+    const projectUpdates: Record<string, unknown> = {}
+
     if (body.group_sentiment !== undefined) projectUpdates.group_sentiment = body.group_sentiment
     if (body.influence_level !== undefined) projectUpdates.influence_level = body.influence_level
     if (body.awareness !== undefined) projectUpdates.awareness = body.awareness
@@ -187,73 +244,74 @@ export async function PATCH(request: Request) {
 
     projectUpdates.updated_at = new Date().toISOString()
 
-    const { data, error } = await supabaseAdmin
-      .from('project_groups')
-      .update(projectUpdates)
-      .eq('id', project_group_id)
-      .select()
-      .single()
+    const updated = unwrapRequired(
+      'update project_groups',
+      await supabaseAdmin
+        .from('project_groups')
+        .update(projectUpdates)
+        .eq('id', project_group_id)
+        .select()
+        .maybeSingle(),
+      'Group link not found'
+    )
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json(data)
+    return NextResponse.json(updated)
   }
 
-  // Otherwise, update global group info
-  const globalUpdates: any = {}
-  
+  if (!id) throw badRequest('id or project_group_id required')
+
+  // Otherwise, update global group info.
+  const globalUpdates: Record<string, unknown> = {}
+
   if (body.name !== undefined) globalUpdates.name = body.name
   if (body.description !== undefined) globalUpdates.description = body.description
   if (body.color !== undefined) globalUpdates.color = body.color
 
   globalUpdates.updated_at = new Date().toISOString()
 
-  const { data, error } = await supabaseAdmin
-    .from('stakeholder_groups')
-    .update(globalUpdates)
-    .eq('id', id)
-    .eq('user_id', user.id)
-    .select()
-    .single()
+  const updated = unwrapRequired(
+    'update stakeholder_groups',
+    await supabaseAdmin
+      .from('stakeholder_groups')
+      .update(globalUpdates)
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .select()
+      .maybeSingle(),
+    'Group not found'
+  )
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json(data)
-}
+  return NextResponse.json(updated)
+})
 
 // DELETE - Remove group (from project or globally)
-export async function DELETE(request: Request) {
-  const { user, error: authError } = await getAuthenticatedUser(request)
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+export const DELETE = withAuth('DELETE /api/groups', async ({ request, user }) => {
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
   const projectGroupId = searchParams.get('projectGroupId')
 
-  // If projectGroupId, just unlink from project
+  // Unlink from a project only.
   if (projectGroupId) {
+    await requireProjectGroupAccess(user.id, projectGroupId)
+
     const { error } = await supabaseAdmin
       .from('project_groups')
       .delete()
       .eq('id', projectGroupId)
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('[DELETE /api/groups] unlink failed:', error)
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({ success: true })
   }
 
-  // Otherwise, delete global group (will cascade to project_groups)
-  if (!id) {
-    return NextResponse.json({ error: 'id required' }, { status: 400 })
-  }
+  // Otherwise, delete the global group (cascades to project_groups).
+  if (!id) throw badRequest('id required')
 
   const { error } = await supabaseAdmin
     .from('stakeholder_groups')
@@ -262,8 +320,9 @@ export async function DELETE(request: Request) {
     .eq('user_id', user.id)
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('[DELETE /api/groups] delete failed:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 
   return NextResponse.json({ success: true })
-}
+})

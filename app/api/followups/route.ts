@@ -1,13 +1,19 @@
-import { supabaseAdmin } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
-import { getAuthenticatedUser } from '@/lib/auth'
+import { supabaseAdmin } from '@/lib/supabase'
+import {
+  withAuth,
+  readJsonBody,
+  badRequest,
+  unwrap,
+  unwrapRequired,
+} from '@/lib/api-utils'
 
-export async function GET(request: Request) {
-  const { user, error: authError } = await getAuthenticatedUser(request)
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+const STAKEHOLDER_JOIN = `
+      *,
+      stakeholder:stakeholders(id, name, role, stakeholder_type)
+    `
 
+export const GET = withAuth('GET /api/followups', async ({ request, user }) => {
   const { searchParams } = new URL(request.url)
   const projectId = searchParams.get('projectId')
   const stakeholderId = searchParams.get('stakeholderId')
@@ -15,10 +21,7 @@ export async function GET(request: Request) {
 
   let query = supabaseAdmin
     .from('scheduled_followups')
-    .select(`
-      *,
-      stakeholder:stakeholders(id, name, role, stakeholder_type)
-    `)
+    .select(STAKEHOLDER_JOIN)
     .eq('user_id', user.id)
     .order('scheduled_date', { ascending: true })
 
@@ -33,103 +36,113 @@ export async function GET(request: Request) {
   // Get only upcoming (not completed, date >= today)
   if (upcoming === 'true') {
     const today = new Date().toISOString().split('T')[0]
-    query = query
-      .eq('completed', false)
-      .gte('scheduled_date', today)
-      .limit(5)
+    query = query.eq('completed', false).gte('scheduled_date', today).limit(5)
   }
 
-  const { data, error } = await query
+  const followups = unwrap('select scheduled_followups', await query)
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
+  return NextResponse.json(followups ?? [])
+})
 
-  return NextResponse.json(data)
-}
-
-export async function POST(request: Request) {
-  const { user, error: authError } = await getAuthenticatedUser(request)
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const body = await request.json()
+export const POST = withAuth('POST /api/followups', async ({ request, user }) => {
+  const body = await readJsonBody<{
+    project_id?: string
+    stakeholder_id?: string
+    scheduled_date?: string
+    title?: string
+    notes?: string | null
+  }>(request)
 
   const { project_id, stakeholder_id, scheduled_date, title, notes } = body
 
-  const { data, error } = await supabaseAdmin
-    .from('scheduled_followups')
-    .insert({
-      project_id,
-      stakeholder_id,
-      user_id: user.id,
-      scheduled_date,
-      title,
-      notes: notes || null,
-    })
-    .select(`
-      *,
-      stakeholder:stakeholders(id, name, role, stakeholder_type)
-    `)
-    .single()
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  if (!scheduled_date || !title) {
+    throw badRequest('scheduled_date and title are required')
   }
 
-  return NextResponse.json(data)
-}
+  const followup = unwrapRequired(
+    'insert scheduled_followups',
+    await supabaseAdmin
+      .from('scheduled_followups')
+      .insert({
+        project_id,
+        stakeholder_id,
+        user_id: user.id,
+        scheduled_date,
+        title,
+        notes: notes || null,
+      })
+      .select(STAKEHOLDER_JOIN)
+      .maybeSingle(),
+    'Follow-up was not created'
+  )
 
-export async function PATCH(request: Request) {
-  const { user, error: authError } = await getAuthenticatedUser(request)
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  return NextResponse.json(followup)
+})
+
+export const PATCH = withAuth(
+  'PATCH /api/followups',
+  async ({ request, user }) => {
+    const body = await readJsonBody<{
+      id?: string
+      scheduled_date?: string
+      title?: string
+      notes?: string | null
+      completed?: boolean
+    }>(request)
+
+    const { id, scheduled_date, title, notes, completed } = body
+
+    if (!id) throw badRequest('id required')
+
+    const updateData: Record<string, unknown> = {}
+    if (scheduled_date !== undefined) updateData.scheduled_date = scheduled_date
+    if (title !== undefined) updateData.title = title
+    if (notes !== undefined) updateData.notes = notes
+    if (completed !== undefined) updateData.completed = completed
+
+    if (Object.keys(updateData).length === 0) {
+      throw badRequest('No updatable fields provided')
+    }
+
+    // Scoped to user_id, so a row belonging to someone else simply isn't found.
+    const followup = unwrapRequired(
+      'update scheduled_followups',
+      await supabaseAdmin
+        .from('scheduled_followups')
+        .update(updateData)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .maybeSingle(),
+      'Follow-up not found'
+    )
+
+    return NextResponse.json(followup)
   }
+)
 
-  const body = await request.json()
+export const DELETE = withAuth(
+  'DELETE /api/followups',
+  async ({ request, user }) => {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
 
-  const { id, scheduled_date, title, notes, completed } = body
+    if (!id) throw badRequest('id required')
 
-  const updateData: any = {}
-  if (scheduled_date !== undefined) updateData.scheduled_date = scheduled_date
-  if (title !== undefined) updateData.title = title
-  if (notes !== undefined) updateData.notes = notes
-  if (completed !== undefined) updateData.completed = completed
+    const { error } = await supabaseAdmin
+      .from('scheduled_followups')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id)
 
-  const { data, error } = await supabaseAdmin
-    .from('scheduled_followups')
-    .update(updateData)
-    .eq('id', id)
-    .eq('user_id', user.id)
-    .select()
-    .single()
+    if (error) {
+      console.error('[DELETE /api/followups] delete failed:', error)
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      )
+    }
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true })
   }
-
-  return NextResponse.json(data)
-}
-
-export async function DELETE(request: Request) {
-  const { user, error: authError } = await getAuthenticatedUser(request)
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const { searchParams } = new URL(request.url)
-  const id = searchParams.get('id')
-
-  const { error } = await supabaseAdmin
-    .from('scheduled_followups')
-    .delete()
-    .eq('id', id)
-    .eq('user_id', user.id)
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json({ success: true })
-}
+)

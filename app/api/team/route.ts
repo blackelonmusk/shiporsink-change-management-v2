@@ -1,110 +1,94 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { getAuthenticatedUser, verifyProjectOwnership } from '@/lib/auth'
+import { requireProjectAccess } from '@/lib/auth'
+import {
+  withAuth,
+  readJsonBody,
+  badRequest,
+  notFound,
+  unwrap,
+  unwrapRequired,
+} from '@/lib/api-utils'
 
-export async function GET(request: Request) {
-  const { user, error: authError } = await getAuthenticatedUser(request)
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+export const GET = withAuth('GET /api/team', async ({ request, user }) => {
   const { searchParams } = new URL(request.url)
   const projectId = searchParams.get('projectId')
 
-  if (!projectId) {
-    return NextResponse.json({ error: 'projectId required' }, { status: 400 })
-  }
+  if (!projectId) throw badRequest('projectId required')
 
-  const hasAccess = await verifyProjectOwnership(user.id, projectId)
-  if (!hasAccess) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  await requireProjectAccess(user.id, projectId)
 
-  const { data, error } = await supabaseAdmin
-    .from('change_project_members')
-    .select('*')
-    .eq('project_id', projectId)
-    .order('created_at', { ascending: true })
+  const members = unwrap(
+    'select change_project_members',
+    await supabaseAdmin
+      .from('change_project_members')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: true })
+  )
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
+  return NextResponse.json(members ?? [])
+})
 
-  return NextResponse.json(data)
-}
+export const POST = withAuth('POST /api/team', async ({ request, user }) => {
+  const body = await readJsonBody<{
+    project_id?: string
+    invited_email?: string
+  }>(request)
 
-export async function POST(request: Request) {
-  const { user, error: authError } = await getAuthenticatedUser(request)
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const body = await request.json()
   const { project_id, invited_email } = body
 
-  const hasAccess = await verifyProjectOwnership(user.id, project_id)
-  if (!hasAccess) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!project_id || !invited_email) {
+    throw badRequest('project_id and invited_email are required')
   }
+
+  await requireProjectAccess(user.id, project_id)
 
   // Check if already invited
-  const { data: existing } = await supabaseAdmin
-    .from('change_project_members')
-    .select('id')
-    .eq('project_id', project_id)
-    .eq('invited_email', invited_email)
-    .single()
+  const existing = unwrap<{ id: string }>(
+    'select change_project_members for duplicate check',
+    await supabaseAdmin
+      .from('change_project_members')
+      .select('id')
+      .eq('project_id', project_id)
+      .eq('invited_email', invited_email)
+      .maybeSingle()
+  )
 
-  if (existing) {
-    return NextResponse.json({ error: 'Already invited' }, { status: 400 })
-  }
+  if (existing) throw badRequest('Already invited')
 
-  const { data, error } = await supabaseAdmin
-    .from('change_project_members')
-    .insert([
-      {
-        project_id,
-        invited_email,
-      },
-    ])
-    .select()
-    .single()
+  const member = unwrapRequired(
+    'insert change_project_members',
+    await supabaseAdmin
+      .from('change_project_members')
+      .insert([{ project_id, invited_email }])
+      .select()
+      .maybeSingle(),
+    'Invite was not created'
+  )
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
+  return NextResponse.json(member)
+})
 
-  return NextResponse.json(data)
-}
-
-export async function DELETE(request: Request) {
-  const { user, error: authError } = await getAuthenticatedUser(request)
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+export const DELETE = withAuth('DELETE /api/team', async ({ request, user }) => {
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
 
-  if (!id) {
-    return NextResponse.json({ error: 'id required' }, { status: 400 })
-  }
+  if (!id) throw badRequest('id required')
 
   // Verify ownership via the member's project
-  const { data: member } = await supabaseAdmin
-    .from('change_project_members')
-    .select('project_id')
-    .eq('id', id)
-    .single()
+  const member = unwrap<{ project_id: string }>(
+    'select change_project_members for ownership check',
+    await supabaseAdmin
+      .from('change_project_members')
+      .select('project_id')
+      .eq('id', id)
+      .maybeSingle()
+  )
 
-  if (!member) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  }
+  if (!member) throw notFound()
 
-  const hasAccess = await verifyProjectOwnership(user.id, member.project_id)
-  if (!hasAccess) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  await requireProjectAccess(user.id, member.project_id)
 
   const { error } = await supabaseAdmin
     .from('change_project_members')
@@ -112,8 +96,9 @@ export async function DELETE(request: Request) {
     .eq('id', id)
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('[DELETE /api/team] delete failed:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 
   return NextResponse.json({ success: true })
-}
+})

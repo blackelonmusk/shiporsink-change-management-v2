@@ -1,61 +1,52 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { cookies } from 'next/headers'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth, unwrap, unwrapRequired } from '@/lib/api-utils'
 
-// GET template details with stakeholders and milestones
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { category: string } }
-) {
-  try {
-    const supabaseAuth = createRouteHandlerClient({ cookies })
+type Params = { category: string }
 
-    const {
-      data: { session },
-    } = await supabaseAuth.auth.getSession()
+/**
+ * GET template details with stakeholders and milestones.
+ *
+ * This route previously authenticated via cookies (createRouteHandlerClient +
+ * getSession) rather than the Bearer token used everywhere else, and its
+ * catch-all turned a stale session into a 500. It now uses the same
+ * service-role verification as the rest of the API.
+ */
+export const GET = withAuth<Params>(
+  'GET /api/templates/[category]',
+  async ({ params }) => {
+    const template = unwrapRequired<{ id: string }>(
+      'select templates',
+      await supabaseAdmin
+        .from('templates')
+        .select('*')
+        .eq('category', params.category)
+        .maybeSingle(),
+      'Template not found'
+    )
 
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const stakeholders = unwrap(
+      'select template_stakeholders',
+      await supabaseAdmin
+        .from('template_stakeholders')
+        .select('*')
+        .eq('template_id', template.id)
+        .order('sort_order', { ascending: true })
+    )
 
-    // Fetch template
-    const { data: template, error: templateError } = await supabaseAdmin
-      .from('templates')
-      .select('*')
-      .eq('category', params.category)
-      .single()
-
-    if (templateError) throw templateError
-
-    // Fetch template stakeholders
-    const { data: stakeholders, error: stakeholdersError } = await supabaseAdmin
-      .from('template_stakeholders')
-      .select('*')
-      .eq('template_id', template.id)
-      .order('sort_order', { ascending: true })
-
-    if (stakeholdersError) throw stakeholdersError
-
-    // Fetch template milestones
-    const { data: milestones, error: milestonesError } = await supabaseAdmin
-      .from('template_milestones')
-      .select('*')
-      .eq('template_id', template.id)
-      .order('sort_order', { ascending: true })
-
-    if (milestonesError) throw milestonesError
+    const milestones = unwrap(
+      'select template_milestones',
+      await supabaseAdmin
+        .from('template_milestones')
+        .select('*')
+        .eq('template_id', template.id)
+        .order('sort_order', { ascending: true })
+    )
 
     return NextResponse.json({
       template,
-      stakeholders,
-      milestones
+      stakeholders: stakeholders ?? [],
+      milestones: milestones ?? [],
     })
-  } catch (error) {
-    console.error('Error fetching template:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch template' },
-      { status: 500 }
-    )
   }
-}
+)

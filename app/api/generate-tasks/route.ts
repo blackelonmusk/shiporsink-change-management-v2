@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { getAuthenticatedUser, verifyProjectOwnership } from '@/lib/auth';
+import { requireProjectAccess } from '@/lib/auth';
+import { withAuth, readJsonBody, badRequest, unwrap } from '@/lib/api-utils';
 import Anthropic from '@anthropic-ai/sdk';
 
 const anthropic = new Anthropic({
@@ -8,44 +9,29 @@ const anthropic = new Anthropic({
 });
 
 // GET - Fetch boards for dropdown
-export async function GET(request: NextRequest) {
-  const { user, error: authError } = await getAuthenticatedUser(request)
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  try {
-    const { data, error } = await supabaseAdmin
+export const GET = withAuth('GET /api/generate-tasks', async () => {
+  const boards = unwrap<Record<string, any>[]>(
+    'select boards',
+    await supabaseAdmin
       .from('boards')
       .select('id, name, workspace:workspaces(name)')
-      .order('name');
+      .order('name')
+  );
 
-    if (error) {
-      console.error('Fetch boards error:', error);
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-    }
+  const mapped = (boards || []).map((b) => ({
+    id: b.id,
+    name: b.name,
+    workspaceName: b.workspace?.name || 'No Workspace',
+    displayName: b.workspace?.name ? `${b.workspace.name} / ${b.name}` : b.name,
+  }));
 
-    const boards = (data || []).map((b: any) => ({
-      id: b.id,
-      name: b.name,
-      workspaceName: b.workspace?.name || 'No Workspace',
-      displayName: b.workspace?.name ? `${b.workspace.name} / ${b.name}` : b.name,
-    }));
+  return NextResponse.json({ success: true, boards: mapped });
+});
 
-    return NextResponse.json({ success: true, boards });
-  } catch (error) {
-    console.error('Fetch boards error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch boards' }, { status: 500 });
-  }
-}
-
-export async function POST(request: NextRequest) {
-  const { user, error: authError } = await getAuthenticatedUser(request)
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  try {
+export const POST = withAuth(
+  'POST /api/generate-tasks',
+  async ({ request, user }) => {
+    const body = await readJsonBody<Record<string, any>>(request);
     const {
       projectId,
       projectName,
@@ -54,28 +40,30 @@ export async function POST(request: NextRequest) {
       milestones,
       riskLevel,
       engagementLevel,
-    } = await request.json();
+    } = body;
 
     if (!projectId || !projectName) {
+      throw badRequest('projectId and projectName are required');
+    }
+
+    await requireProjectAccess(user.id, projectId);
+
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error('[POST /api/generate-tasks] ANTHROPIC_API_KEY is not configured');
       return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
-        { status: 400 }
+        { success: false, error: 'AI service not configured' },
+        { status: 500 }
       );
     }
 
-    const hasAccess = await verifyProjectOwnership(user.id, projectId)
-    if (!hasAccess) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
     // Build stakeholder summary
-    const stakeholderSummary = stakeholders?.length > 0 
+    const stakeholderSummary = stakeholders?.length > 0
       ? stakeholders.map((s: any) => {
           const adkarAvg = Math.round(
-            ((s.awareness_score || 50) + 
-             (s.desire_score || 50) + 
-             (s.knowledge_score || 50) + 
-             (s.ability_score || 50) + 
+            ((s.awareness_score || 50) +
+             (s.desire_score || 50) +
+             (s.knowledge_score || 50) +
+             (s.ability_score || 50) +
              (s.reinforcement_score || 50)) / 5
           );
           return `- ${s.name} (${s.role || 'No role'}): ${s.stakeholder_type || 'neutral'} type, ADKAR avg: ${adkarAvg}%`;
@@ -88,12 +76,15 @@ export async function POST(request: NextRequest) {
       : 'No milestones defined yet';
 
     // Generate task suggestions using Claude
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2500,
-      messages: [{
-        role: 'user',
-        content: `You are a Change Management expert helping create actionable tasks for a change initiative.
+    let responseText: string;
+
+    try {
+      const message = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2500,
+        messages: [{
+          role: 'user',
+          content: `You are a Change Management expert helping create actionable tasks for a change initiative.
 
 ## Change Project Context
 **Project Name:** ${projectName}
@@ -137,11 +128,19 @@ Respond with a JSON array of task objects:
 }
 
 Only respond with the JSON, no other text.`
-      }],
-    });
+        }],
+      });
 
-    const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
-    
+      responseText = message.content[0].type === 'text' ? message.content[0].text : '';
+    } catch (error) {
+      // An upstream AI failure is not this service being broken.
+      console.error('[POST /api/generate-tasks] Anthropic request failed:', error);
+      return NextResponse.json(
+        { success: false, error: 'Failed to generate tasks' },
+        { status: 502 }
+      );
+    }
+
     // Parse the AI response
     let tasks;
     try {
@@ -165,69 +164,53 @@ Only respond with the JSON, no other text.`
       projectId,
       projectName,
     });
-
-  } catch (error) {
-    console.error('Generate tasks error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to generate tasks' },
-      { status: 500 }
-    );
   }
-}
+);
 
 // Create selected tasks in Tick PM
-export async function PUT(request: NextRequest) {
-  const { user, error: authError } = await getAuthenticatedUser(request)
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  try {
-    const { tasks, projectId, projectName, boardId } = await request.json();
-
-    console.log('PUT /api/generate-tasks received:', {
-      tasksCount: tasks?.length,
-      projectId,
-      projectName,
-      boardId,
-      userId: user.id
-    });
+export const PUT = withAuth(
+  'PUT /api/generate-tasks',
+  async ({ request, user }) => {
+    const body = await readJsonBody<Record<string, any>>(request);
+    const { tasks, projectId, projectName, boardId } = body;
 
     if (!tasks?.length || !boardId) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required fields (tasks or boardId)' },
-        { status: 400 }
-      );
+      throw badRequest('Missing required fields (tasks or boardId)');
+    }
+
+    // Only link tasks back to a project the caller actually owns.
+    if (projectId) {
+      await requireProjectAccess(user.id, projectId);
     }
 
     // Get the next task number for this board
-    const { data: maxTask } = await supabaseAdmin
-      .from('tasks')
-      .select('task_number')
-      .eq('board_id', boardId)
-      .order('task_number', { ascending: false })
-      .limit(1)
-      .single();
+    const maxTask = unwrap<{ task_number: number | null }>(
+      'select tasks for next task_number',
+      await supabaseAdmin
+        .from('tasks')
+        .select('task_number')
+        .eq('board_id', boardId)
+        .order('task_number', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    );
 
     let nextTaskNumber = (maxTask?.task_number || 0) + 1;
 
     // Create tasks
     const createdTasks = [];
-    const errors = [];
+    const errors: string[] = [];
+
     for (const task of tasks) {
-      const taskData: any = {
+      const taskData: Record<string, unknown> = {
         title: task.title,
         description: `${task.description}\n\n---\n📁 From Change Project: ${projectName}\n🏷️ Category: ${task.category}`,
         board_id: boardId,
         status: 'todo',
         task_number: nextTaskNumber++,
+        created_by: user.id,
       };
-      
-      // Only add created_by if userId is provided
-      if (user.id) {
-        taskData.created_by = user.id;
-      }
-      
+
       const { data, error } = await supabaseAdmin
         .from('tasks')
         .insert(taskData)
@@ -235,16 +218,20 @@ export async function PUT(request: NextRequest) {
         .single();
 
       if (error) {
-        console.error('Task insert error:', error);
+        console.error('[PUT /api/generate-tasks] task insert failed:', error);
         errors.push(error.message);
+        continue;
       }
 
-      if (data && !error) {
-        createdTasks.push(data);
-        
-        // Create suite_link to connect task to change project
-        if (projectId) {
-          const linkData: any = {
+      if (!data) continue;
+
+      createdTasks.push(data);
+
+      // Create suite_link to connect task to change project
+      if (projectId) {
+        const { error: linkError } = await supabaseAdmin
+          .from('suite_links')
+          .insert({
             source_app: 'change',
             source_type: 'project',
             source_id: projectId,
@@ -252,11 +239,14 @@ export async function PUT(request: NextRequest) {
             target_type: 'task',
             target_id: data.id,
             target_title: task.title,
-          };
-          if (user.id) {
-            linkData.created_by = user.id;
-          }
-          await supabaseAdmin.from('suite_links').insert(linkData);
+            created_by: user.id,
+          });
+
+        if (linkError) {
+          console.error(
+            '[PUT /api/generate-tasks] suite_link insert failed (non-fatal):',
+            linkError
+          );
         }
       }
     }
@@ -267,12 +257,5 @@ export async function PUT(request: NextRequest) {
       count: createdTasks.length,
       errors: errors.length > 0 ? errors : undefined,
     });
-
-  } catch (error) {
-    console.error('Create tasks error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to create tasks' },
-      { status: 500 }
-    );
   }
-}
+);

@@ -1,53 +1,44 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { getAuthenticatedUser } from '@/lib/auth'
+import { requireProjectAccess } from '@/lib/auth'
+import { withAuth, badRequest, notFound, unwrap } from '@/lib/api-utils'
 
-export async function GET(request: Request) {
-  const { user, error: authError } = await getAuthenticatedUser(request)
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+export const GET = withAuth('GET /api/history', async ({ request, user }) => {
   const { searchParams } = new URL(request.url)
-  const projectStakeholderId = searchParams.get('stakeholder_id') || searchParams.get('projectStakeholderId')
-  const limit = parseInt(searchParams.get('limit') || '100')
+  const projectStakeholderId =
+    searchParams.get('stakeholder_id') ||
+    searchParams.get('projectStakeholderId')
 
-  if (!projectStakeholderId) {
-    return NextResponse.json({ error: 'stakeholder_id required' }, { status: 400 })
-  }
+  const parsedLimit = Number.parseInt(searchParams.get('limit') || '100', 10)
+  const limit = Number.isFinite(parsedLimit)
+    ? Math.min(Math.max(parsedLimit, 1), 500)
+    : 100
 
-  // Verify the project_stakeholder belongs to a project owned by this user
-  const { data: ps } = await supabaseAdmin
-    .from('project_stakeholders')
-    .select('project_id')
-    .eq('id', projectStakeholderId)
-    .single()
+  if (!projectStakeholderId) throw badRequest('stakeholder_id required')
 
-  if (!ps) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  }
+  // Verify the project_stakeholder belongs to a project owned by this user.
+  const projectStakeholder = unwrap<{ project_id: string }>(
+    'select project_stakeholders for ownership check',
+    await supabaseAdmin
+      .from('project_stakeholders')
+      .select('project_id')
+      .eq('id', projectStakeholderId)
+      .maybeSingle()
+  )
 
-  const { data: project } = await supabaseAdmin
-    .from('change_projects')
-    .select('id')
-    .eq('id', ps.project_id)
-    .eq('user_id', user.id)
-    .single()
+  if (!projectStakeholder) throw notFound()
 
-  if (!project) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  await requireProjectAccess(user.id, projectStakeholder.project_id)
 
-  const { data, error } = await supabaseAdmin
-    .from('score_history')
-    .select('*')
-    .eq('project_stakeholder_id', projectStakeholderId)
-    .order('recorded_at', { ascending: false })
-    .limit(limit)
+  const history = unwrap(
+    'select score_history',
+    await supabaseAdmin
+      .from('score_history')
+      .select('*')
+      .eq('project_stakeholder_id', projectStakeholderId)
+      .order('recorded_at', { ascending: false })
+      .limit(limit)
+  )
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json(data)
-}
+  return NextResponse.json(history ?? [])
+})

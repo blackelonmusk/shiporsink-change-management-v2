@@ -79,10 +79,32 @@ export default function RootLayout({
             <ToastProvider />
           </ThemeProvider>
         </QueryProvider>
-        <Script id="register-sw" strategy="afterInteractive">
-          {`if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js');
-          }`}
+        {/*
+          The old /sw.js was a pass-through service worker (respondWith(fetch(request)))
+          that added no offline value but proxied every request, so a single rejected
+          fetch failed the whole navigation. The file is gone, but a worker already
+          installed in a browser keeps running until it is explicitly unregistered.
+          This tears down any leftover registration and its caches so returning users
+          recover on their next load instead of having to clear site data by hand.
+        */}
+        <Script id="unregister-legacy-sw" strategy="afterInteractive">
+          {`(function () {
+            if (!('serviceWorker' in navigator)) return;
+            navigator.serviceWorker.getRegistrations()
+              .then(function (registrations) {
+                registrations.forEach(function (registration) {
+                  registration.unregister();
+                });
+              })
+              .catch(function () { /* nothing we can do; never block the page */ });
+            if (typeof caches !== 'undefined' && caches.keys) {
+              caches.keys()
+                .then(function (keys) {
+                  keys.forEach(function (key) { caches.delete(key); });
+                })
+                .catch(function () { /* ignore */ });
+            }
+          })();`}
         </Script>
         <Analytics />
       </body>

@@ -1,157 +1,147 @@
+import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { NextRequest, NextResponse } from 'next/server'
-import { getAuthenticatedUser } from '@/lib/auth'
+import {
+  withAuth,
+  readJsonBody,
+  badRequest,
+  unwrap,
+  unwrapRequired,
+} from '@/lib/api-utils'
+
+const ROUTE = 'POST /api/templates/apply'
 
 // POST - Create project from template
-export async function POST(request: NextRequest) {
-  const { user, error: authError } = await getAuthenticatedUser(request)
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export const POST = withAuth(ROUTE, async ({ request, user }) => {
+  const body = await readJsonBody<{
+    templateCategory?: string
+    projectName?: string
+    startDate?: string
+  }>(request)
+
+  const { templateCategory, projectName, startDate } = body
+
+  if (!templateCategory || !projectName) {
+    throw badRequest('templateCategory and projectName are required')
   }
 
-  try {
-    const body = await request.json()
-    const { templateCategory, projectName, startDate } = body
-
-    console.log('Template request:', { templateCategory, projectName, startDate })
-
-    if (!templateCategory || !projectName) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
-    }
-
-    // Fetch template
-    const { data: template, error: templateError } = await supabaseAdmin
+  const template = unwrapRequired<{
+    id: string
+    name: string
+    guidance: string | null
+  }>(
+    'select templates',
+    await supabaseAdmin
       .from('templates')
       .select('*')
       .eq('category', templateCategory)
-      .single()
+      .maybeSingle(),
+    'Template not found'
+  )
 
-    if (templateError) {
-      console.error('Template fetch error:', templateError)
-      throw templateError
-    }
-
-    console.log('Template found:', template.name)
-
-    // Create project
-    const { data: project, error: projectError } = await supabaseAdmin
+  // Create project
+  const project = unwrapRequired<{ id: string }>(
+    'insert change_projects',
+    await supabaseAdmin
       .from('change_projects')
       .insert({
         name: projectName,
         description: template.guidance,
         user_id: user.id,
-        status: 'active'
+        status: 'active',
       })
       .select()
-      .single()
+      .maybeSingle(),
+    'Project was not created'
+  )
 
-    if (projectError) {
-      console.error('Project creation error:', projectError)
-      throw projectError
+  // Create stakeholders from the template
+  const templateStakeholders =
+    unwrap<Record<string, any>[]>(
+      'select template_stakeholders',
+      await supabaseAdmin
+        .from('template_stakeholders')
+        .select('*')
+        .eq('template_id', template.id)
+    ) ?? []
+
+  if (templateStakeholders.length > 0) {
+    const stakeholdersToInsert = templateStakeholders.map((ts) => ({
+      project_id: project.id,
+      name: ts.name,
+      role: ts.role,
+      stakeholder_type: ts.stakeholder_type,
+      engagement_score: 0,
+      performance_score: 0,
+      notes: ts.notes,
+    }))
+
+    const { error: insertStakeholdersError } = await supabaseAdmin
+      .from('stakeholders')
+      .insert(stakeholdersToInsert)
+
+    if (insertStakeholdersError) {
+      console.error(
+        `[${ROUTE}] stakeholders insert failed for project ${project.id}:`,
+        insertStakeholdersError
+      )
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      )
     }
-
-    console.log('Project created:', project.id)
-
-    // Fetch template stakeholders
-    const { data: templateStakeholders, error: stakeholdersError } = await supabaseAdmin
-      .from('template_stakeholders')
-      .select('*')
-      .eq('template_id', template.id)
-
-    if (stakeholdersError) {
-      console.error('Template stakeholders fetch error:', stakeholdersError)
-      throw stakeholdersError
-    }
-
-    console.log('Template stakeholders found:', templateStakeholders?.length || 0)
-
-    // Create stakeholders
-    if (templateStakeholders && templateStakeholders.length > 0) {
-      const stakeholdersToInsert = templateStakeholders.map((ts: any) => ({
-        project_id: project.id,
-        name: ts.name,
-        role: ts.role,
-        stakeholder_type: ts.stakeholder_type,
-        engagement_score: 0,
-        performance_score: 0,
-        notes: ts.notes
-      }))
-
-      console.log('Inserting stakeholders:', stakeholdersToInsert.length)
-
-      const { error: insertStakeholdersError } = await supabaseAdmin
-        .from('stakeholders')
-        .insert(stakeholdersToInsert)
-
-      if (insertStakeholdersError) {
-        console.error('Stakeholders insert error:', insertStakeholdersError)
-        throw insertStakeholdersError
-      }
-
-      console.log('Stakeholders inserted successfully')
-    }
-
-    // Fetch template milestones
-    const { data: templateMilestones, error: milestonesError } = await supabaseAdmin
-      .from('template_milestones')
-      .select('*')
-      .eq('template_id', template.id)
-
-    if (milestonesError) {
-      console.error('Template milestones fetch error:', milestonesError)
-      throw milestonesError
-    }
-
-    console.log('Template milestones found:', templateMilestones?.length || 0)
-
-    // Create milestones
-    if (templateMilestones && templateMilestones.length > 0) {
-      const projectStartDate = startDate ? new Date(startDate) : new Date()
-      
-      const milestonesToInsert = templateMilestones.map((tm: any) => {
-        const milestoneDate = new Date(projectStartDate)
-        milestoneDate.setDate(milestoneDate.getDate() + tm.days_from_start)
-        
-        return {
-          project_id: project.id,
-          name: tm.name,
-          description: tm.description,
-          date: milestoneDate.toISOString().split('T')[0],
-          type: tm.type,
-          status: 'upcoming'
-        }
-      })
-
-      console.log('Inserting milestones:', milestonesToInsert.length)
-
-      const { error: insertMilestonesError } = await supabaseAdmin
-        .from('milestones')
-        .insert(milestonesToInsert)
-
-      if (insertMilestonesError) {
-        console.error('Milestones insert error:', insertMilestonesError)
-        throw insertMilestonesError
-      }
-
-      console.log('Milestones inserted successfully')
-    }
-
-    return NextResponse.json({
-      project,
-      message: 'Project created successfully from template'
-    }, { status: 201 })
-
-  } catch (error: any) {
-    console.error('Error creating project from template:', error)
-    return NextResponse.json(
-      { 
-        error: 'Failed to create project from template',
-        details: error.message || 'Unknown error'
-      },
-      { status: 500 }
-    )
   }
-}
+
+  // Create milestones from the template
+  const templateMilestones =
+    unwrap<Record<string, any>[]>(
+      'select template_milestones',
+      await supabaseAdmin
+        .from('template_milestones')
+        .select('*')
+        .eq('template_id', template.id)
+    ) ?? []
+
+  if (templateMilestones.length > 0) {
+    const parsedStart = startDate ? new Date(startDate) : new Date()
+    const projectStartDate = Number.isNaN(parsedStart.getTime())
+      ? new Date()
+      : parsedStart
+
+    const milestonesToInsert = templateMilestones.map((tm) => {
+      const milestoneDate = new Date(projectStartDate)
+      milestoneDate.setDate(milestoneDate.getDate() + (tm.days_from_start ?? 0))
+
+      return {
+        project_id: project.id,
+        name: tm.name,
+        description: tm.description,
+        date: milestoneDate.toISOString().split('T')[0],
+        type: tm.type,
+        status: 'upcoming',
+      }
+    })
+
+    const { error: insertMilestonesError } = await supabaseAdmin
+      .from('milestones')
+      .insert(milestonesToInsert)
+
+    if (insertMilestonesError) {
+      console.error(
+        `[${ROUTE}] milestones insert failed for project ${project.id}:`,
+        insertMilestonesError
+      )
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      )
+    }
+  }
+
+  return NextResponse.json(
+    {
+      project,
+      message: 'Project created successfully from template',
+    },
+    { status: 201 }
+  )
+})

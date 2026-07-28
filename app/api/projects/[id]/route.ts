@@ -1,93 +1,89 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { getAuthenticatedUser, verifyProjectOwnership } from '@/lib/auth'
+import { requireProjectAccess } from '@/lib/auth'
+import {
+  withAuth,
+  readJsonBody,
+  badRequest,
+  unwrapRequired,
+} from '@/lib/api-utils'
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
-  const { user, error: authError } = await getAuthenticatedUser(request)
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+type Params = { id: string }
+
+export const GET = withAuth<Params>(
+  'GET /api/projects/[id]',
+  async ({ user, params }) => {
+    await requireProjectAccess(user.id, params.id)
+
+    const project = unwrapRequired(
+      'select change_projects by id',
+      await supabaseAdmin
+        .from('change_projects')
+        .select('*')
+        .eq('id', params.id)
+        .maybeSingle(),
+      'Project not found'
+    )
+
+    return NextResponse.json(project)
   }
+)
 
-  const hasAccess = await verifyProjectOwnership(user.id, params.id)
-  if (!hasAccess) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+export const PATCH = withAuth<Params>(
+  'PATCH /api/projects/[id]',
+  async ({ request, user, params }) => {
+    await requireProjectAccess(user.id, params.id)
+
+    const body = await readJsonBody<{
+      name?: string
+      description?: string
+      status?: string
+      logo_url?: string
+    }>(request)
+
+    const updateData: Record<string, unknown> = {}
+    if (body.name !== undefined) updateData.name = body.name
+    if (body.description !== undefined) updateData.description = body.description
+    if (body.status !== undefined) updateData.status = body.status
+    if (body.logo_url !== undefined) updateData.logo_url = body.logo_url
+
+    if (Object.keys(updateData).length === 0) {
+      throw badRequest('No updatable fields provided')
+    }
+
+    const project = unwrapRequired(
+      'update change_projects',
+      await supabaseAdmin
+        .from('change_projects')
+        .update(updateData)
+        .eq('id', params.id)
+        .select()
+        .maybeSingle(),
+      'Project not found'
+    )
+
+    return NextResponse.json(project)
   }
+)
 
-  const { data, error } = await supabaseAdmin
-    .from('change_projects')
-    .select('*')
-    .eq('id', params.id)
-    .single()
+export const DELETE = withAuth<Params>(
+  'DELETE /api/projects/[id]',
+  async ({ user, params }) => {
+    await requireProjectAccess(user.id, params.id)
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    const { error } = await supabaseAdmin
+      .from('change_projects')
+      .delete()
+      .eq('id', params.id)
+
+    if (error) {
+      console.error('[DELETE /api/projects/[id]] delete failed:', error)
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true })
   }
-
-  return NextResponse.json(data)
-}
-
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
-  const { user, error: authError } = await getAuthenticatedUser(request)
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const hasAccess = await verifyProjectOwnership(user.id, params.id)
-  if (!hasAccess) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
-
-  const body = await request.json()
-  const { name, description, status, logo_url } = body
-
-  const updateData: Record<string, unknown> = {}
-  if (name !== undefined) updateData.name = name
-  if (description !== undefined) updateData.description = description
-  if (status !== undefined) updateData.status = status
-  if (logo_url !== undefined) updateData.logo_url = logo_url
-
-  const { data, error } = await supabaseAdmin
-    .from('change_projects')
-    .update(updateData)
-    .eq('id', params.id)
-    .select()
-    .single()
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json(data)
-}
-
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
-  const { user, error: authError } = await getAuthenticatedUser(request)
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const hasAccess = await verifyProjectOwnership(user.id, params.id)
-  if (!hasAccess) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
-
-  const { error } = await supabaseAdmin
-    .from('change_projects')
-    .delete()
-    .eq('id', params.id)
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json({ success: true })
-}
+)

@@ -10,7 +10,7 @@ import PageTransition from '@/components/PageTransition'
 import CreateFromTemplateModal from '@/components/CreateFromTemplateModal'
 import { SuiteApps } from '@/components/SuiteApps'
 import type { Project } from '@/lib/types'
-import { authFetch } from '@/lib/api'
+import { authFetch, isBrokenSessionError, recoverFromBrokenSession } from '@/lib/api'
 import type { User } from '@supabase/supabase-js'
 
 const STATUS_OPTIONS = [
@@ -23,11 +23,12 @@ const STATUS_OPTIONS = [
 export default function Dashboard() {
   const router = useRouter()
   const supabase = createClientComponentClient()
-  
+
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [projects, setProjects] = useState<Project[]>([])
   const [sharedProjects, setSharedProjects] = useState<Project[]>([])
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [newProjectName, setNewProjectName] = useState('')
   const [editingProject, setEditingProject] = useState<Project | null>(null)
   const [editName, setEditName] = useState('')
@@ -40,29 +41,65 @@ export default function Dashboard() {
   }, [])
 
   const checkUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push('/auth')
-      return
+    try {
+      const { data, error } = await supabase.auth.getUser()
+
+      // A stale refresh token can never be recovered by retrying. Clear the
+      // local session and send the user to sign in, so nobody has to clear
+      // site data by hand to get out of a broken dashboard.
+      if (isBrokenSessionError(error)) {
+        console.warn('Stored session is unusable, signing out:', error?.message)
+        await recoverFromBrokenSession(supabase)
+        return
+      }
+
+      if (error || !data.user) {
+        router.push('/auth')
+        return
+      }
+
+      setUser(data.user)
+      setLoading(false)
+      fetchProjects()
+    } catch (err) {
+      // getUser() itself threw -- treat exactly like a broken session.
+      console.error('Auth check failed:', err)
+      await recoverFromBrokenSession(supabase)
     }
-    setUser(user)
-    setLoading(false)
-    fetchProjects()
   }
 
   const fetchProjects = async () => {
-    // Fetch owned projects
-    const ownedRes = await authFetch(`/api/projects`)
-    if (ownedRes.ok) {
-      const data = await ownedRes.json()
-      setProjects(data)
-    }
+    setLoadError(null)
 
-    // Fetch shared projects
-    const sharedRes = await authFetch(`/api/projects/shared`)
-    if (sharedRes.ok) {
-      const data = await sharedRes.json()
-      setSharedProjects(data)
+    try {
+      // Fetch owned projects
+      const ownedRes = await authFetch(`/api/projects`)
+      if (ownedRes.ok) {
+        setProjects(await ownedRes.json())
+      } else {
+        // authFetch already handles 401 by recovering the session; anything
+        // else is a real failure and must not be swallowed into a blank page.
+        if (ownedRes.status !== 401) {
+          console.error(`GET /api/projects failed: ${ownedRes.status}`)
+          setLoadError("We couldn't load your projects. Please try again.")
+        }
+        return
+      }
+
+      // Fetch shared projects
+      const sharedRes = await authFetch(`/api/projects/shared`)
+      if (sharedRes.ok) {
+        setSharedProjects(await sharedRes.json())
+      } else if (sharedRes.status !== 401) {
+        // Shared projects are supplementary; log but don't block the page.
+        console.error(`GET /api/projects/shared failed: ${sharedRes.status}`)
+      }
+    } catch (err) {
+      // authFetch throws when there is no session; it has already redirected.
+      if (err instanceof Error && err.message === 'Not authenticated') return
+
+      console.error('Failed to load projects:', err)
+      setLoadError("We couldn't load your projects. Please try again.")
     }
   }
 
@@ -70,16 +107,27 @@ export default function Dashboard() {
     e.preventDefault()
     if (!newProjectName.trim() || !user) return
 
-    await authFetch('/api/projects', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: newProjectName
-      }),
-    })
+    try {
+      const res = await authFetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newProjectName
+        }),
+      })
 
-    setNewProjectName('')
-    fetchProjects()
+      if (!res.ok && res.status !== 401) {
+        setLoadError("We couldn't create that project. Please try again.")
+        return
+      }
+
+      setNewProjectName('')
+      fetchProjects()
+    } catch (err) {
+      if (err instanceof Error && err.message === 'Not authenticated') return
+      console.error('Failed to create project:', err)
+      setLoadError("We couldn't create that project. Please try again.")
+    }
   }
 
   const startEditing = (project: Project) => {
@@ -92,29 +140,51 @@ export default function Dashboard() {
   const saveProject = async () => {
     if (!editingProject || !editName.trim() || !user) return
 
-    await authFetch(`/api/projects/${editingProject.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: editName,
-        description: editDescription,
-        status: editStatus
-      }),
-    })
+    try {
+      const res = await authFetch(`/api/projects/${editingProject.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editName,
+          description: editDescription,
+          status: editStatus
+        }),
+      })
 
-    setEditingProject(null)
-    fetchProjects()
+      if (!res.ok && res.status !== 401) {
+        setLoadError("We couldn't save your changes. Please try again.")
+        return
+      }
+
+      setEditingProject(null)
+      fetchProjects()
+    } catch (err) {
+      if (err instanceof Error && err.message === 'Not authenticated') return
+      console.error('Failed to save project:', err)
+      setLoadError("We couldn't save your changes. Please try again.")
+    }
   }
 
   const deleteProject = async (project: Project) => {
     if (!confirm(`Delete "${project.name}"? This will delete all stakeholders and cannot be undone.`)) return
     if (!user) return
 
-    await authFetch(`/api/projects/${project.id}`, {
-      method: 'DELETE',
-    })
+    try {
+      const res = await authFetch(`/api/projects/${project.id}`, {
+        method: 'DELETE',
+      })
 
-    fetchProjects()
+      if (!res.ok && res.status !== 401) {
+        setLoadError("We couldn't delete that project. Please try again.")
+        return
+      }
+
+      fetchProjects()
+    } catch (err) {
+      if (err instanceof Error && err.message === 'Not authenticated') return
+      console.error('Failed to delete project:', err)
+      setLoadError("We couldn't delete that project. Please try again.")
+    }
   }
 
   const getStatusBadge = (status: string) => {
@@ -145,11 +215,26 @@ export default function Dashboard() {
 
       <div className="flex flex-1">
         <Sidebar />
-        
+
         <PageTransition className="flex-1">
           <main className="flex-1 px-4 md:px-8 py-8 pb-20 md:pb-8 overflow-x-hidden w-full">
             <div className="max-w-5xl mx-auto">
               <h2 className="text-3xl font-bold text-white mb-6">Your Projects</h2>
+
+              {loadError && (
+                <div className="mb-6 flex items-center justify-between gap-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3">
+                  <div className="flex items-center gap-2.5">
+                    <XCircle className="w-4 h-4 text-red-400 shrink-0" />
+                    <span className="text-sm text-red-300">{loadError}</span>
+                  </div>
+                  <button
+                    onClick={fetchProjects}
+                    className="text-sm font-medium text-red-300 hover:text-white transition-colors whitespace-nowrap"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
 
               <div className="flex flex-col sm:flex-row gap-3 mb-8">
                 {/* Create Blank Project */}
@@ -223,7 +308,7 @@ export default function Dashboard() {
                 ))}
               </div>
 
-              {projects.length === 0 && (
+              {projects.length === 0 && !loadError && (
                 <div className="text-center py-16 animate-fadeIn">
                   <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center">
                     <span className="text-4xl">📋</span>
@@ -292,8 +377,8 @@ export default function Dashboard() {
           <div className="bg-zinc-900 rounded-xl w-full max-w-md p-6 border border-zinc-800 shadow-2xl animate-scaleIn">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-white">Edit Project</h2>
-              <button 
-                onClick={() => setEditingProject(null)} 
+              <button
+                onClick={() => setEditingProject(null)}
                 className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800 transition-colors"
               >
                 <X className="w-5 h-5" />

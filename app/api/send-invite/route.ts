@@ -1,26 +1,38 @@
 import { NextResponse } from 'next/server'
-import { getAuthenticatedUser } from '@/lib/auth'
+import { withAuth, readJsonBody, badRequest } from '@/lib/api-utils'
 
-export async function POST(request: Request) {
-  const { user, error: authError } = await getAuthenticatedUser(request)
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+const ROUTE = 'POST /api/send-invite'
 
-  const { to, inviterName, projectName, projectUrl } = await request.json()
+export const POST = withAuth(ROUTE, async ({ request }) => {
+  const body = await readJsonBody<{
+    to?: string
+    inviterName?: string
+    projectName?: string
+    projectUrl?: string
+  }>(request)
+
+  const { to, inviterName, projectName, projectUrl } = body
 
   if (!to || !projectName) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    throw badRequest('to and projectName are required')
   }
 
   const RESEND_API_KEY = process.env.RESEND_API_KEY
 
   if (!RESEND_API_KEY) {
-    return NextResponse.json({ error: 'Email service not configured' }, { status: 500 })
+    // Server misconfiguration -- a genuine 500, and worth logging loudly.
+    console.error(`[${ROUTE}] RESEND_API_KEY is not configured`)
+    return NextResponse.json(
+      { error: 'Email service not configured' },
+      { status: 500 }
+    )
   }
 
+  let response: Response
+  let data: { message?: string; id?: string }
+
   try {
-    const response = await fetch('https://api.resend.com/emails', {
+    response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -36,30 +48,30 @@ export async function POST(request: Request) {
               <h1 style="color: white; margin: 0; font-size: 28px;">🚢 Ship or Sink</h1>
               <p style="color: #93c5fd; margin: 10px 0 0 0;">AI Change Management Assistant</p>
             </div>
-            
+
             <div style="padding: 40px; background: #f9fafb;">
               <h2 style="color: #1f2937; margin-top: 0;">You've been invited!</h2>
-              
+
               <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
                 <strong>${inviterName || 'A team member'}</strong> has invited you to collaborate on the change management project:
               </p>
-              
+
               <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 20px 0;">
                 <h3 style="color: #1f2937; margin: 0 0 10px 0;">${projectName}</h3>
                 <p style="color: #6b7280; margin: 0; font-size: 14px;">Change Management Project</p>
               </div>
-              
-              <a href="${projectUrl || 'https://shiporsink-change-management-v2-new.vercel.app'}" 
-                 style="display: inline-block; background: #2563eb; color: white; padding: 14px 28px; 
+
+              <a href="${projectUrl || 'https://change.shiporsink.ai'}"
+                 style="display: inline-block; background: #2563eb; color: white; padding: 14px 28px;
                         text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0;">
                 View Project
               </a>
-              
+
               <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
                 Don't have an account yet? You'll be prompted to sign up when you click the link above.
               </p>
             </div>
-            
+
             <div style="padding: 20px; text-align: center; background: #1f2937;">
               <p style="color: #9ca3af; margin: 0; font-size: 12px;">
                 Sent by Ship or Sink • AI Change Management Assistant
@@ -70,16 +82,22 @@ export async function POST(request: Request) {
       }),
     })
 
-    const data = await response.json()
-
-    if (!response.ok) {
-      console.error('Resend error:', data)
-      return NextResponse.json({ error: data.message || 'Failed to send email' }, { status: 500 })
-    }
-
-    return NextResponse.json({ success: true, id: data.id })
+    data = await response.json().catch(() => ({}))
   } catch (error) {
-    console.error('Email error:', error)
-    return NextResponse.json({ error: 'Failed to send email' }, { status: 500 })
+    console.error(`[${ROUTE}] Resend request failed:`, error)
+    return NextResponse.json(
+      { error: 'Failed to send email' },
+      { status: 502 }
+    )
   }
-}
+
+  if (!response.ok) {
+    console.error(`[${ROUTE}] Resend returned ${response.status}:`, data)
+    return NextResponse.json(
+      { error: data.message || 'Failed to send email' },
+      { status: 502 }
+    )
+  }
+
+  return NextResponse.json({ success: true, id: data.id })
+})
